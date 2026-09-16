@@ -9,6 +9,15 @@ export interface SandboxOptions {
   image: string;
   /** Disable container network (safer; may break installs). Default true. */
   networkDisabled: boolean;
+  /**
+   * Apply hardened container flags: no-new-privileges, cap-drop ALL,
+   * read-only rootfs + tmpfs, pids limit. Default true.
+   */
+  hardened?: boolean;
+  /** Memory limit for Docker (e.g. "2g"). Default "2g" when hardened. */
+  memoryLimit?: string;
+  /** PIDs limit. Default 256 when hardened. */
+  pidsLimit?: number;
 }
 
 export interface CommandRunResult {
@@ -105,19 +114,7 @@ function runDocker(
   ctx: CommandRunContext,
   sandbox: SandboxOptions,
 ): Promise<CommandRunResult> {
-  const mount = toDockerMount(ctx.workspaceRoot);
-  const args = [
-    "run",
-    "--rm",
-    "-v",
-    `${mount}:/workspace`,
-    "-w",
-    "/workspace",
-  ];
-  if (sandbox.networkDisabled) {
-    args.push("--network", "none");
-  }
-  args.push(sandbox.image, "sh", "-c", command);
+  const args = buildDockerRunArgs(command, ctx.workspaceRoot, sandbox);
 
   return spawnCaptured("docker", args, {
     cwd: ctx.workspaceRoot,
@@ -128,6 +125,41 @@ function runDocker(
     maxOutput: ctx.maxCommandOutputChars,
     signal: ctx.signal,
   });
+}
+
+/** Exported for tests — constructs `docker run` argv. */
+export function buildDockerRunArgs(
+  command: string,
+  workspaceRoot: string,
+  sandbox: SandboxOptions,
+): string[] {
+  const mount = toDockerMount(workspaceRoot);
+  const hardened = sandbox.hardened !== false;
+  const args = ["run", "--rm"];
+
+  if (hardened) {
+    args.push(
+      "--security-opt",
+      "no-new-privileges",
+      "--cap-drop",
+      "ALL",
+      "--read-only",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,size=256m",
+      "--pids-limit",
+      String(sandbox.pidsLimit ?? 256),
+      "--memory",
+      sandbox.memoryLimit ?? "2g",
+    );
+  }
+
+  args.push("-v", `${mount}:/workspace`, "-w", "/workspace");
+
+  if (sandbox.networkDisabled) {
+    args.push("--network", "none");
+  }
+  args.push(sandbox.image, "sh", "-c", command);
+  return args;
 }
 
 function toDockerMount(hostPath: string): string {

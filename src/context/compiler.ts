@@ -8,6 +8,7 @@ import {
   expandImportClosure,
   extractFailurePaths,
 } from "./escalation.js";
+import { rankRelevantFiles } from "./relevance.js";
 
 export interface CompiledContext {
   systemPrompt: string;
@@ -60,6 +61,7 @@ export class ContextCompiler {
       keywords,
       input.maxContextChars,
       closurePaths,
+      parseChangedPaths(input.diffSummary),
     );
 
     const toolDefs: ModelToolDefinition[] = input.tools.map((t) => ({
@@ -212,61 +214,47 @@ function selectRelevantFiles(
   keywords: string[],
   maxChars: number,
   priorityPaths: string[] = [],
+  changedPaths: string[] = [],
 ): Array<{ path: string; content: string; truncated: boolean }> {
-  const files = workspace.listFiles(".", { maxEntries: 400 });
-  const scored = files
-    .filter((f) => /\.(ts|tsx|js|jsx|json|md)$/i.test(f))
-    .map((path) => {
-      const base = path.toLowerCase();
-      let score = 0;
-      if (priorityPaths.includes(path)) score += 50;
-      for (const kw of keywords) {
-        if (base.includes(kw)) score += 5;
-      }
-      if (/\.(test|spec)\./i.test(path)) score += 2;
-      if (path.endsWith("package.json")) score += 3;
-      return { path, score };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 12);
-
-  const selectedPaths = new Set(scored.map((s) => s.path));
-  for (const p of priorityPaths) {
-    if (!selectedPaths.has(p) && workspace.exists(p)) {
-      scored.unshift({ path: p, score: 100 });
-      selectedPaths.add(p);
-    }
-  }
-
-  const selected =
-    scored.length > 0
-      ? scored.slice(0, 12)
-      : files
-          .filter((f) => /\.(ts|js)$/i.test(f))
-          .slice(0, 5)
-          .map((path) => ({ path, score: 1 }));
+  const ranked = rankRelevantFiles(workspace, {
+    keywords,
+    priorityPaths,
+    changedPaths,
+    maxFiles: 12,
+  });
 
   const out: Array<{ path: string; content: string; truncated: boolean }> = [];
   let used = 0;
   const perFile = Math.min(8_000, Math.floor(maxChars / 3));
 
-  for (const item of selected) {
+  for (const path of ranked) {
     if (used >= maxChars * 0.6) break;
     try {
-      let content = workspace.readFile(item.path, 200_000);
+      let content = workspace.readFile(path, 200_000);
       let truncated = false;
       if (content.length > perFile) {
         content = content.slice(0, perFile);
         truncated = true;
       }
-      out.push({ path: item.path, content, truncated });
+      out.push({ path, content, truncated });
       used += content.length;
     } catch {
       // skip
     }
   }
   return out;
+}
+
+function parseChangedPaths(diffSummary: string | null | undefined): string[] {
+  if (!diffSummary) return [];
+  const paths = new Set<string>();
+  for (const line of diffSummary.split(/\r?\n/)) {
+    const plus = /^\+\+\+\s+b\/(.+)$/.exec(line);
+    const minus = /^---\s+a\/(.+)$/.exec(line);
+    const hit = plus?.[1] ?? minus?.[1];
+    if (hit && hit !== "/dev/null") paths.add(hit.replace(/\\/g, "/"));
+  }
+  return [...paths];
 }
 
 function formatVerification(result: VerificationResult): string {

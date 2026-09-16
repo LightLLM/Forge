@@ -10,7 +10,10 @@ export { FakeModelProvider } from "./models/fake.js";
 export { OllamaProvider } from "./models/ollama.js";
 export { OpenRouterProvider } from "./models/openrouter.js";
 export { DeterministicModelRouter } from "./models/router.js";
-export { DefaultPolicyEngine } from "./policy/engine.js";
+export { createApprovalGate, DenyHighRiskGate, AutoApproveGate } from "./policy/approvals.js";
+export type { ApprovalGate, ApprovalsConfig, ApprovalMode } from "./policy/approvals.js";
+export { buildDockerRunArgs } from "./tools/sandbox.js";
+export { rankRelevantFiles } from "./context/relevance.js";
 export { hasPlaywright, VerificationEngine } from "./verification/engine.js";
 export {
   isDockerAvailable,

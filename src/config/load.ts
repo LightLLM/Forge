@@ -49,11 +49,27 @@ export const ForgeConfigSchema = z.object({
       sandbox: z.enum(["auto", "host", "docker"]).default("host"),
       dockerImage: z.string().default("node:22-bookworm-slim"),
       dockerNetworkDisabled: z.boolean().default(true),
+      dockerHardened: z.boolean().default(true),
+      dockerMemoryLimit: z.string().default("2g"),
+      dockerPidsLimit: z.number().int().positive().default(256),
     })
     .default({}),
   git: z
     .object({
       createTaskBranch: z.boolean().default(false),
+    })
+    .default({}),
+  approvals: z
+    .object({
+      /**
+       * off — no extra gates (default)
+       * prompt — ask on TTY for write/execute (FORGE_AUTO_APPROVE=1 to auto-yes)
+       * deny-high-risk — automatically deny write/execute
+       */
+      mode: z.enum(["off", "prompt", "deny-high-risk"]).default("off"),
+      risks: z
+        .array(z.enum(["read", "write", "execute", "network"]))
+        .default(["write", "execute"]),
     })
     .default({}),
   ui: z
@@ -200,9 +216,16 @@ export function defaultConfigJson(): string {
         sandbox: "host",
         dockerImage: "node:22-bookworm-slim",
         dockerNetworkDisabled: true,
+        dockerHardened: true,
+        dockerMemoryLimit: "2g",
+        dockerPidsLimit: 256,
       },
       git: {
         createTaskBranch: false,
+      },
+      approvals: {
+        mode: "off",
+        risks: ["write", "execute"],
       },
       ui: {
         streamProgress: true,

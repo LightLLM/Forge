@@ -14,6 +14,7 @@ import type { ModelProvider } from "../models/provider.js";
 import { DeterministicModelRouter } from "../models/router.js";
 import type { PersistenceStore } from "../persistence/store.js";
 import { DefaultPolicyEngine } from "../policy/engine.js";
+import { createApprovalGate } from "../policy/approvals.js";
 import {
   createRepositoryTools,
   DEFAULT_COMMAND_ALLOWLIST,
@@ -110,12 +111,27 @@ export class TaskOrchestrator {
     const policy = new DefaultPolicyEngine({
       allowWrites: true,
       allowExecute: true,
+      approvals: {
+        mode: config.approvals.mode,
+        risks: config.approvals.risks,
+      },
     });
+
+    const approvalGate = createApprovalGate(
+      {
+        mode: config.approvals.mode,
+        risks: config.approvals.risks,
+      },
+      { store, logger },
+    );
 
     const sandbox: SandboxOptions = {
       mode: config.commands.sandbox,
       image: config.commands.dockerImage,
       networkDisabled: config.commands.dockerNetworkDisabled,
+      hardened: config.commands.dockerHardened,
+      memoryLimit: config.commands.dockerMemoryLimit,
+      pidsLimit: config.commands.dockerPidsLimit,
     };
 
     const verificationEngine = new VerificationEngine({
@@ -155,6 +171,7 @@ export class TaskOrchestrator {
         phase: "implement",
         workspace,
         policy,
+        approvalGate,
         budgets,
         localAvailable,
         cloudAvailable,
@@ -232,6 +249,7 @@ export class TaskOrchestrator {
             phase: "repair",
             workspace,
             policy,
+            approvalGate,
             budgets,
             localAvailable: await this.isLocalAvailable(task.localModel),
             cloudAvailable: this.isCloudAvailable(),
@@ -290,6 +308,7 @@ export class TaskOrchestrator {
           phase: "escalate",
           workspace,
           policy,
+          approvalGate,
           budgets,
           localAvailable: false,
           cloudAvailable,
@@ -376,6 +395,7 @@ export class TaskOrchestrator {
     phase: "implement" | "repair" | "escalate";
     workspace: Workspace;
     policy: DefaultPolicyEngine;
+    approvalGate: ReturnType<typeof createApprovalGate>;
     budgets: BudgetTracker;
     localAvailable: boolean;
     cloudAvailable: boolean;
@@ -426,6 +446,9 @@ export class TaskOrchestrator {
       mode: config.commands.sandbox,
       image: config.commands.dockerImage,
       networkDisabled: config.commands.dockerNetworkDisabled,
+      hardened: config.commands.dockerHardened,
+      memoryLimit: config.commands.dockerMemoryLimit,
+      pidsLimit: config.commands.dockerPidsLimit,
     };
 
     const result = await this.agentLoop.run({
@@ -437,6 +460,7 @@ export class TaskOrchestrator {
       workspace: args.workspace,
       tools: this.tools,
       policy: args.policy,
+      approvalGate: args.approvalGate,
       store,
       logger,
       budgets: args.budgets,

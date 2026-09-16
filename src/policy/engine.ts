@@ -1,9 +1,15 @@
 import type { RegisteredTool, ToolContext } from "../tools/types.js";
 import type { ToolCallProposal, ToolCallResult, ToolRisk } from "../core/types.js";
+import {
+  riskNeedsApproval,
+  type ApprovalGate,
+  type ApprovalsConfig,
+} from "./approvals.js";
 
 export interface PolicyDecision {
   allowed: boolean;
   reason?: string;
+  requiresApproval?: boolean;
 }
 
 export interface PolicyEngine {
@@ -23,6 +29,7 @@ export class DefaultPolicyEngine implements PolicyEngine {
       allowWrites: boolean;
       allowExecute: boolean;
       forbiddenPathPatterns?: RegExp[];
+      approvals?: ApprovalsConfig;
     } = { allowWrites: true, allowExecute: true },
   ) {}
 
@@ -63,6 +70,11 @@ export class DefaultPolicyEngine implements PolicyEngine {
       }
     }
 
+    const approvals = this.options.approvals;
+    if (approvals && riskNeedsApproval(approvals, tool.risk)) {
+      return { allowed: true, requiresApproval: true };
+    }
+
     return { allowed: true };
   }
 
@@ -90,11 +102,21 @@ function extractPath(args: Record<string, unknown>): string | null {
   return null;
 }
 
+function summarizeCall(call: ToolCallProposal): string {
+  const path = extractPath(call.arguments);
+  if (call.name === "run_command") {
+    return `command: ${String(call.arguments.command ?? "").slice(0, 120)}`;
+  }
+  if (path) return `path: ${path}`;
+  return JSON.stringify(call.arguments).slice(0, 160);
+}
+
 export async function authorizeAndExecute(
   call: ToolCallProposal,
   tool: RegisteredTool | undefined,
   policy: PolicyEngine,
   ctx: ToolContext,
+  approvalGate?: ApprovalGate,
 ): Promise<ToolCallResult> {
   const decision = policy.evaluate(call, tool);
   if (!decision.allowed || !tool) {
@@ -107,6 +129,37 @@ export async function authorizeAndExecute(
       output: null,
       error: decision.reason ?? "Denied",
     };
+  }
+
+  if (decision.requiresApproval) {
+    if (!approvalGate) {
+      return {
+        id: call.id,
+        name: call.name,
+        ok: false,
+        denied: true,
+        denialReason: "Approval required but no approval gate configured",
+        output: null,
+        error: "Approval required",
+      };
+    }
+    const verdict = await approvalGate.decide({
+      taskId: ctx.taskId,
+      toolName: call.name,
+      risk: tool.risk,
+      summary: summarizeCall(call),
+    });
+    if (verdict === "denied") {
+      return {
+        id: call.id,
+        name: call.name,
+        ok: false,
+        denied: true,
+        denialReason: "User or policy denied high-risk approval",
+        output: null,
+        error: "Approval denied",
+      };
+    }
   }
 
   try {

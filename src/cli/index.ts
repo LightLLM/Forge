@@ -12,7 +12,7 @@ const program = new Command();
 program
   .name("forge")
   .description("Local-first hybrid autonomous software-engineering harness")
-  .version("0.1.0");
+  .version("0.2.0");
 
 registerInit(program);
 registerDoctor(program);

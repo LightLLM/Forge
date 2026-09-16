@@ -548,6 +548,37 @@ export class SqliteStore implements PersistenceStore {
     return record;
   }
 
+  resolveApproval(id: string, status: "approved" | "denied"): ApprovalRecord {
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE approvals SET status = ?, resolved_at = ? WHERE id = ?`,
+      )
+      .run(status, ts, id);
+    const rows = this.db
+      .prepare(`SELECT * FROM approvals WHERE id = ?`)
+      .all(id) as Array<{
+      id: string;
+      task_id: string;
+      action: string;
+      status: "pending" | "approved" | "denied";
+      reason: string | null;
+      created_at: string;
+      resolved_at: string | null;
+    }>;
+    const row = rows[0];
+    if (!row) throw new Error(`Approval not found: ${id}`);
+    return {
+      id: row.id,
+      taskId: row.task_id,
+      action: row.action,
+      status: row.status,
+      reason: row.reason,
+      createdAt: row.created_at,
+      resolvedAt: row.resolved_at,
+    };
+  }
+
   listApprovals(taskId: string): ApprovalRecord[] {
     const rows = this.db
       .prepare(`SELECT * FROM approvals WHERE task_id = ? ORDER BY created_at ASC`)

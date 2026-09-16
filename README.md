@@ -56,7 +56,7 @@ See [docs/security.md](docs/security.md).
 - Git
 - Ollama (for local inference)
 - Optional: OpenRouter API key (for cloud escalation)
-- Optional: Docker (future sandbox backend; not required for v0)
+- Optional: Docker (for `commands.sandbox` = `auto` | `docker`)
 
 ## Installation
 
@@ -149,20 +149,27 @@ See [docs/model-routing.md](docs/model-routing.md).
 
 Priority: CLI flags > environment > `forge.config.json` > defaults.
 
-### v0.1 options
+### v0.1 / v0.2 options
 
 ```json
 {
   "commands": {
     "sandbox": "host",
     "dockerImage": "node:22-bookworm-slim",
-    "dockerNetworkDisabled": true
+    "dockerNetworkDisabled": true,
+    "dockerHardened": true,
+    "dockerMemoryLimit": "2g",
+    "dockerPidsLimit": 256
   },
   "verification": {
     "playwright": "auto"
   },
   "git": {
     "createTaskBranch": false
+  },
+  "approvals": {
+    "mode": "off",
+    "risks": ["write", "execute"]
   },
   "ui": {
     "streamProgress": true
@@ -171,8 +178,10 @@ Priority: CLI flags > environment > `forge.config.json` > defaults.
 ```
 
 - `commands.sandbox`: `host` (default), `auto` (Docker when available), or `docker` (required)
+- `commands.dockerHardened`: drop capabilities, no-new-privileges, read-only rootfs + tmpfs (default `true`)
 - `verification.playwright`: run Playwright when detected (`auto`), force (`on`), or skip (`off`)
 - `git.createTaskBranch`: create `forge/<task-id>` before work
+- `approvals.mode`: `off` | `prompt` (TTY / `FORGE_AUTO_APPROVE=1`) | `deny-high-risk`
 - `ui.streamProgress`: show Ollama streaming progress on stderr
 
 ## Verification
@@ -218,12 +227,14 @@ pnpm test
 
 Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0 / v0.1)
+## Limitations (v0.2)
 
 - Single-machine SQLite persistence via Node's experimental `node:sqlite`
 - Docker sandbox is optional (`commands.sandbox`); default is `host` (safer with native `node_modules` on Windows/macOS)
-- Deterministic relevance (no vector DB)
+- Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
+- Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure
 - Conservative Git (no push/merge/force); optional task branches only
+- Approval `prompt` mode needs a TTY (or `FORGE_AUTO_APPROVE=1`)
 - Tool-calling quality depends on the selected model
 - OpenRouter cost may be reported as unknown when the API omits it
 - Global `forge` binary may collide with Atlassian Forge / Foundry — use `pnpm forge` or `forge-harness`

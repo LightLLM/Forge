@@ -6,19 +6,23 @@
 - Policy-gated tools, SQLite audit trail, verification + repair
 - CLI: init, doctor, run, status, inspect, models
 
-## v0.1 (this release)
+## v0.1 (shipped)
 
-1. **Optional Docker command sandbox** — `commands.sandbox`: `auto` | `host` | `docker`
-2. **Richer escalation packaging** — failure path extraction + shallow import closure
-3. **Task branch creation** — `git.createTaskBranch` → `forge/<task-id>`
-4. **Streaming progress** — Ollama token progress on stderr when `ui.streamProgress` is true
-5. **Playwright detection** — `verification.playwright`: `auto` | `on` | `off`
+1. Optional Docker command sandbox
+2. Richer escalation packaging
+3. Task branch creation
+4. Streaming progress
+5. Playwright detection
+
+## v0.2 (this release)
+
+1. **Approval gates** for high-risk tools — `approvals.mode`: `off` | `prompt` | `deny-high-risk`
+2. **Hardened Docker profiles** — no-new-privileges, cap-drop ALL, read-only rootfs + tmpfs, pids/memory limits
+3. **Better relevance** — entrypoint detection, git-diff boost, 2-hop import neighborhoods
 
 ## Later
 
 - PostgreSQL persistence backend
-- Better relevance (still preferably without a mandatory vector DB)
-- Approval gates for high-risk writes
 - Plugin tool packs (still policy-gated)
 - Hosted control plane (explicit non-goal until local loop is excellent)
-- Hardened Docker user/seccomp profiles
+- Approval UX via `forge approve` for detached runs

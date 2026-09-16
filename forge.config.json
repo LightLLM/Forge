@@ -25,10 +25,17 @@
   "commands": {
     "sandbox": "host",
     "dockerImage": "node:22-bookworm-slim",
-    "dockerNetworkDisabled": true
+    "dockerNetworkDisabled": true,
+    "dockerHardened": true,
+    "dockerMemoryLimit": "2g",
+    "dockerPidsLimit": 256
   },
   "git": {
     "createTaskBranch": false
+  },
+  "approvals": {
+    "mode": "off",
+    "risks": ["write", "execute"]
   },
   "ui": {
     "streamProgress": true

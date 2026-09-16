@@ -11,6 +11,7 @@ import { ContextCompiler } from "../context/compiler.js";
 import type { ModelProvider } from "../models/provider.js";
 import type { PersistenceStore } from "../persistence/store.js";
 import { authorizeAndExecute, type PolicyEngine } from "../policy/engine.js";
+import type { ApprovalGate } from "../policy/approvals.js";
 import type { RegisteredTool, ToolContext } from "../tools/types.js";
 import type { Logger } from "../telemetry/logger.js";
 import type { Workspace } from "../workspace/workspace.js";
@@ -29,6 +30,7 @@ export interface AgentLoopOptions {
   workspace: Workspace;
   tools: RegisteredTool[];
   policy: PolicyEngine;
+  approvalGate?: ApprovalGate;
   store: PersistenceStore;
   logger: Logger;
   budgets: BudgetTracker;
@@ -296,6 +298,7 @@ export class AgentLoop {
           toolMap.get(proposal.name),
           policy,
           toolCtx,
+          options.approvalGate,
         );
         toolResults.push(result);
 

@@ -40,6 +40,8 @@ Tests in `tests/filesystem.test.ts` attack traversal and symlink escape.
 
 - Prefer Docker for `run_command` / verification when `commands.sandbox` is `auto` or `docker` and Docker is available
 - Fall back to host execution when Docker is missing (`auto` mode)
+- Hardened Docker (default): `--security-opt no-new-privileges`, `--cap-drop ALL`, `--read-only` rootfs with `/tmp` tmpfs, pids + memory limits; workspace mount stays writable
+- High-risk tool approvals via `approvals.mode` (`prompt` / `deny-high-risk`) — repository content cannot disable this
 
 ## Secrets
 
