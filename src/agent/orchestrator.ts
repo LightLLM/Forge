@@ -253,6 +253,7 @@ export class TaskOrchestrator {
       playwright: config.verification.playwright,
       browserQa: config.verification.browserQa,
       browserQaDriver: config.verification.browserQaDriver,
+      architecture: config.verification.architecture,
       commandTimeoutMs: config.limits.commandTimeoutMs,
       maxCommandOutputChars: config.limits.maxCommandOutputChars,
       commandAllowlist: config.commands.allowlist,

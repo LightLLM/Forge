@@ -186,6 +186,7 @@ describe("agent runtime E2E (fake provider)", () => {
       playwright: "off",
       browserQa: "off",
       browserQaDriver: "stub",
+      architecture: "off",
     };
 
     const store = new SqliteStore(config.dbPath);
@@ -289,6 +290,7 @@ describe("agent runtime E2E (fake provider)", () => {
       playwright: "off",
       browserQa: "off",
       browserQaDriver: "stub",
+      architecture: "off",
     };
     config.openRouterApiKey = "test-key";
 
@@ -381,6 +383,7 @@ describe("local-only never selects openrouter", () => {
         playwright: "off",
         browserQa: "off",
         browserQaDriver: "stub",
+        architecture: "off",
       };
       config.openRouterApiKey = "should-not-matter";
 

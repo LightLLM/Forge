@@ -21,12 +21,12 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M12 | Model Evaluation | [✓] | 2026-09-16 |
 | M13 | Adaptive Router | [✓] | 2026-09-16 |
 | M14 | Failure Intelligence | [✓] | 2026-09-16 |
-| M15 | Knowledge Graph | [ ] | |
-| M16 | Architecture Guardian | [ ] | |
-| M17 | Human Approval Framework | [~] | queue approvals in v0.3; full durable framework later |
-| M18 | Operator Dashboard | [ ] | |
-| M19 | Self-Improving Skills | [ ] | |
-| M20 | Forge v1 RC | [ ] | |
+| M15 | Knowledge Graph | [✓] | 2026-09-16 |
+| M16 | Architecture Guardian | [✓] | 2026-09-16 |
+| M17 | Human Approval Framework | [✓] | 2026-09-16 |
+| M18 | Operator Dashboard | [✓] | 2026-09-16 |
+| M19 | Self-Improving Skills | [✓] | 2026-09-16 |
+| M20 | Forge v1 RC | [✓] | 2026-09-16 |
 
 ---
 
@@ -165,6 +165,60 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** keyword retrieval only; not yet wired into orchestrator repair context
 - **Completion date:** 2026-09-16
 
+## M15 — Knowledge Graph
+
+- **Status:** complete
+- **Scope:** KnowledgeAnalyzer + KnowledgeQuery; file import graph; CLI `forge kg`
+- **Tests:** existing suite + `tests/m15-knowledge.test.ts`
+- **E2E evidence:** SignupPage→UserRepository dependency path on fixture
+- **Limitations:** file-level imports only (no symbols/routes/tables yet)
+- **Completion date:** 2026-09-16
+
+## M16 — Architecture Guardian
+
+- **Status:** complete
+- **Scope:** ArchitectureRule/Policy/Evaluator; verification.architecture; fixtures
+- **Tests:** existing suite + `tests/m16-architecture.test.ts`
+- **E2E evidence:** UI→DB import fails verification when policy present
+- **Limitations:** primarily `no_import` layer rules
+- **Completion date:** 2026-09-16
+
+## M17 — Human Approval Framework
+
+- **Status:** complete
+- **Scope:** ApprovalFramework for restricted actions; silence ≠ approval; CLI `--restricted`
+- **Tests:** existing suite + `tests/m17-approvals.test.ts`
+- **E2E evidence:** pending blocks assertApproved; model cannot self-approve
+- **Limitations:** not every future action path is wired yet
+- **Completion date:** 2026-09-16
+
+## M18 — Operator Dashboard
+
+- **Status:** complete
+- **Scope:** DashboardServer HTTP API + minimal UI over PersistenceStore
+- **Tests:** existing suite + `tests/m18-dashboard.test.ts`
+- **E2E evidence:** approve via UI API; store/CLI see same status
+- **Limitations:** lightweight local UI only
+- **Completion date:** 2026-09-16
+
+## M19 — Self-Improving Skills
+
+- **Status:** complete
+- **Scope:** SkillImprovementService propose/approve/install; forbid silent security installs
+- **Tests:** existing suite + `tests/m19-skill-improve.test.ts`
+- **E2E evidence:** hostile proposal cannot silent-install; privilege metadata rejected
+- **Limitations:** proposals are manual/CLI; no auto-clustering yet
+- **Completion date:** 2026-09-16
+
+## M20 — Forge v1 RC
+
+- **Status:** complete
+- **Scope:** 20-capability checklist, eval-suite catalog, version `1.0.0-rc.1`
+- **Tests:** existing suite + `tests/m20-v1-rc.test.ts`
+- **E2E evidence:** checklist complete; catalog ≥20 tasks; modules exported
+- **Limitations:** live soak across many repos remains manual
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M15 — Knowledge Graph** (repository relationships)
+Super Build Prompt milestones M0–M20 are complete. Follow-on work: deeper KG edges, async Postgres orchestrator, hosted control plane (explicit non-goal until local loop is excellent).

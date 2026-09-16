@@ -47,9 +47,23 @@ describe("M12 model evaluation", () => {
     expect(bad.passRate).toBe(0);
     expect(good.passRate).toBeGreaterThan(bad.passRate);
 
-    // Deterministic re-run
+    // Deterministic re-run (ignore wall-clock latency jitter)
     const report2 = await runner.run(BUILTIN_EVAL_DATASET);
-    expect(report2.summaries).toEqual(report.summaries);
+    expect(
+      report2.summaries.map(({ modelId, passRate, passed, failed }) => ({
+        modelId,
+        passRate,
+        passed,
+        failed,
+      })),
+    ).toEqual(
+      report.summaries.map(({ modelId, passRate, passed, failed }) => ({
+        modelId,
+        passRate,
+        passed,
+        failed,
+      })),
+    );
   });
 
   it("loads fixture dataset and persists report", async () => {

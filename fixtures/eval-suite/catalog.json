@@ -1,0 +1,26 @@
+{
+  "name": "forge-eval-suite",
+  "version": "1.0.0-rc.1",
+  "tasks": [
+    { "id": "bug-null-check", "category": "bug_fix", "title": "Null check", "objective": "Fix null dereference in user lookup" },
+    { "id": "bug-off-by-one", "category": "bug_fix", "title": "Off-by-one", "objective": "Fix pagination off-by-one error" },
+    { "id": "endpoint-health", "category": "new_endpoint", "title": "Health endpoint", "objective": "Add GET /health returning ok" },
+    { "id": "endpoint-users", "category": "new_endpoint", "title": "Users list", "objective": "Add GET /users with pagination" },
+    { "id": "react-form", "category": "react_component", "title": "Signup form", "objective": "Add React signup form component" },
+    { "id": "react-list", "category": "react_component", "title": "User list", "objective": "Add React user list with loading state" },
+    { "id": "db-migration", "category": "database_change", "title": "Add column", "objective": "Add email_verified column with migration + test" },
+    { "id": "db-index", "category": "database_change", "title": "Add index", "objective": "Add index on users.email" },
+    { "id": "auth-login", "category": "authentication", "title": "Login flow", "objective": "Implement password login with session cookie" },
+    { "id": "auth-logout", "category": "authentication", "title": "Logout", "objective": "Add logout clearing session" },
+    { "id": "refactor-extract", "category": "refactor", "title": "Extract service", "objective": "Extract AuthService from route handlers" },
+    { "id": "refactor-rename", "category": "refactor", "title": "Rename module", "objective": "Rename legacy UserStore to UserRepository" },
+    { "id": "dep-upgrade", "category": "dependency_upgrade", "title": "Upgrade zod", "objective": "Upgrade zod major and fix breakages" },
+    { "id": "test-repair", "category": "test_repair", "title": "Fix flaky test", "objective": "Stabilize race in async test" },
+    { "id": "perf-nplus1", "category": "performance", "title": "N+1 query", "objective": "Eliminate N+1 in list endpoint" },
+    { "id": "browser-login", "category": "browser_issue", "title": "Login QA", "objective": "Fix broken login form submit" },
+    { "id": "security-xss", "category": "security_bug", "title": "XSS", "objective": "Escape user HTML in profile page" },
+    { "id": "docs-readme", "category": "documentation", "title": "API docs", "objective": "Document /users endpoints in README" },
+    { "id": "feature-multipart", "category": "multi_file_feature", "title": "Invite flow", "objective": "Add invite-by-email across API, DB, UI" },
+    { "id": "feature-settings", "category": "multi_file_feature", "title": "Settings page", "objective": "Add settings page with validation" }
+  ]
+}

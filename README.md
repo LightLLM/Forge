@@ -188,6 +188,7 @@ Priority: CLI flags > environment > `forge.config.json` > defaults.
 - `verification.playwright`: run Playwright when detected (`auto`), force (`on`), or skip (`off`)
 - `verification.browserQa`: run Forge browser scenarios when present (`auto`), force (`on`), or skip (`off`)
 - `verification.browserQaDriver`: `auto` | `playwright` | `stub`
+- `verification.architecture`: run architecture guardian when `.forge/architecture.json` present (`auto`), force (`on`), or skip (`off`)
 - `git.createTaskBranch`: create `forge/<task-id>` before work (ignored when worktrees enabled)
 - `git.useWorktrees`: isolate each task in `.forge/worktrees` via `git worktree`
 - `git.acquireLease`: exclusive lease on the effective workspace path (auto-on with `useWorktrees`)
@@ -263,6 +264,14 @@ Model self-reports are never treated as success.
 | `forge eval models` | Show recent eval summaries |
 | `forge eval report [id]` | Detailed eval report JSON |
 | `forge failures search "<query>"` | Retrieve prior failure fixes |
+| `forge kg build` | Build repository knowledge graph |
+| `forge kg deps <from> <to>` | Dependency path between files |
+| `forge kg imports <file>` | List imports of a file |
+| `forge dashboard start` | Local operator dashboard (same backend as CLI) |
+| `forge skills propose` | Record a skill improvement proposal |
+| `forge skills proposals` | List skill proposals |
+| `forge skills apply-proposal` | Approve/install skill proposal (human only) |
+| `forge approvals --restricted` | List restricted-action approvals |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -282,9 +291,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends, goal mode, model evaluation, adaptive routing, failure corpus retrieval, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends, goal mode, model evaluation, adaptive routing, failure corpus, knowledge graph, architecture guardian, restricted approvals, operator dashboard sync, skill improvement proposals, Forge v1 RC checklist, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.17)
+## Limitations (v1.0.0-rc.1)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -297,6 +306,10 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - Model eval uses fake profiles by default; live provider benchmarks are manual
 - Adaptive routing requires `routing.adaptive` and does not override `local-only` policy
 - Failure corpus uses keyword retrieval; not yet injected into repair prompts automatically
+- Knowledge graph is file-import based (symbols/routes/tables deferred)
+- Architecture guardian primarily enforces `no_import` layer rules
+- Operator dashboard is a minimal local HTTP UI
+- Skill proposals do not auto-cluster from failures yet
 - Specialized roles filter tools/permissions per phase; multi-role pipelines are not yet one command
 - Browser QA uses stub driver by default; Playwright is optional when installed
 - Daemon job kinds include lightweight builtins + `analysis`; `agent_task` not wired to orchestrator yet

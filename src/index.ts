@@ -129,6 +129,25 @@ export type { EvalRunReport, EvalDataset } from "./eval/index.js";
 export { AdaptiveModelRouter, PerformanceStore } from "./routing/index.js";
 export { FailureCorpus } from "./failures/index.js";
 export type { FailureEntry, FailureMatch } from "./failures/index.js";
+export { KnowledgeAnalyzer, KnowledgeQuery } from "./knowledge/index.js";
+export type { KnowledgeGraph, DependencyAnswer } from "./knowledge/index.js";
+export { ArchitectureEvaluator, ArchitecturePolicyLoader } from "./architecture/index.js";
+export type { ArchitecturePolicy, ArchitectureEvaluation } from "./architecture/index.js";
+export { ApprovalFramework } from "./policy/approval-framework.js";
+export type { DurableApproval, RestrictedActionRequest } from "./policy/approval-framework.js";
+export { DashboardServer } from "./dashboard/index.js";
+export {
+  SkillImprovementService,
+  detectSecurityImpact,
+  proposalsDir,
+} from "./skills/improvement.js";
+export type { SkillImprovementProposal } from "./skills/improvement.js";
+export {
+  FORGE_V1_CAPABILITIES,
+  CAPABILITY_EVIDENCE,
+  assertV1ChecklistComplete,
+  loadEvalSuiteCatalog,
+} from "./v1/index.js";
 export { BudgetTracker } from "./core/budgets/tracker.js";
 export {
   assertTransition,

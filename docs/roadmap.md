@@ -126,7 +126,7 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge goal "<objective>"`, `forge goal resume|status|list`
 - Fixture: `fixtures/goal-mvp`
 
-## v0.17 / M12–M14 (this release)
+## v0.17 / M12–M14 (shipped)
 
 **Model evaluation (M12)**
 
@@ -143,8 +143,22 @@ Approval gates, hardened Docker profiles, better relevance
 - Structured failure corpus + solution evidence retrieval
 - CLI: `forge failures search`
 
+## v1.0.0-rc.1 / M15–M20 (this release)
+
+**Knowledge graph (M15)** — `forge kg build|deps|imports`
+
+**Architecture guardian (M16)** — `.forge/architecture.json` + verification check
+
+**Human approval framework (M17)** — durable restricted-action approvals
+
+**Operator dashboard (M18)** — `forge dashboard start` (same store as CLI)
+
+**Self-improving skills (M19)** — propose/approve/install; no silent security installs
+
+**Forge v1 RC (M20)** — 20-capability checklist + eval-suite catalog
+
 ## Later
 
-- M15 knowledge graph (see milestones)
+- Deeper knowledge-graph edges (symbols, routes, tables)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

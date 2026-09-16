@@ -107,6 +107,8 @@ export const ForgeConfigSchema = z.object({
       /** Declarative Forge browser QA scenarios. */
       browserQa: z.enum(["auto", "on", "off"]).default("auto"),
       browserQaDriver: z.enum(["auto", "playwright", "stub"]).default("auto"),
+      /** Architecture guardian (.forge/architecture.json). */
+      architecture: z.enum(["auto", "on", "off"]).default("auto"),
     })
     .default({}),
   commands: z
@@ -384,6 +386,7 @@ export function defaultConfigJson(): string {
         playwright: "auto",
         browserQa: "auto",
         browserQaDriver: "auto",
+        architecture: "auto",
       },
       commands: {
         sandbox: "host",

@@ -44,6 +44,10 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/eval` | Model evaluation datasets and metrics |
 | `src/routing` | Adaptive performance-aware routing |
 | `src/failures` | Structured failure corpus + retrieval |
+| `src/knowledge` | Deterministic repository knowledge graph |
+| `src/architecture` | Architecture rules + verification guardian |
+| `src/dashboard` | Operator HTTP UI over PersistenceStore |
+| `src/v1` | Forge v1 capability checklist + eval catalog helpers |
 | `src/telemetry` | Structured logs with secret redaction |
 
 ## Persistence

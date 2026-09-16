@@ -8,6 +8,7 @@ import {
 import type { SandboxOptions } from "../tools/sandbox.js";
 import type { Workspace } from "../workspace/workspace.js";
 import { BrowserQaEngine } from "./browser/index.js";
+import { ArchitectureEvaluator } from "../architecture/index.js";
 
 export interface VerificationOptions {
   typecheck: boolean;
@@ -19,6 +20,12 @@ export interface VerificationOptions {
   /** Forge declarative browser QA scenarios (.forge/browserqa/*.json). */
   browserQa: "auto" | "on" | "off";
   browserQaDriver?: "auto" | "playwright" | "stub";
+  /**
+   * Architecture guardian (.forge/architecture.json).
+   * auto — run when policy file present; on — require policy; off — skip.
+   * Defaults to auto when omitted.
+   */
+  architecture?: "auto" | "on" | "off";
   commandTimeoutMs: number;
   maxCommandOutputChars: number;
   commandAllowlist?: string[];
@@ -108,6 +115,9 @@ export class VerificationEngine {
     const browserQaCheck = await this.runBrowserQa(workspace);
     if (browserQaCheck) checks.push(browserQaCheck);
 
+    const architectureCheck = this.runArchitecture(workspace);
+    if (architectureCheck) checks.push(architectureCheck);
+
     const failed = checks.filter((c) => c.status === "failed");
     const runnable = checks.filter((c) => c.status !== "skipped");
     const status: VerificationResult["status"] =
@@ -161,6 +171,60 @@ export class VerificationEngine {
         stderr: err instanceof Error ? err.message : String(err),
         durationMs: Date.now() - started,
         command,
+      };
+    }
+  }
+
+  private runArchitecture(workspace: Workspace): VerificationCheck | null {
+    const mode = this.options.architecture ?? "auto";
+    if (mode === "off") return null;
+
+    const hasPolicy =
+      existsSync(join(workspace.root, ".forge", "architecture.json")) ||
+      existsSync(join(workspace.root, "architecture.json"));
+
+    if (mode === "auto" && !hasPolicy) return null;
+    if (mode === "on" && !hasPolicy) {
+      return {
+        name: "architecture",
+        status: "failed",
+        stderr:
+          "architecture forced on but no .forge/architecture.json or architecture.json",
+      };
+    }
+
+    const started = Date.now();
+    try {
+      const result = new ArchitectureEvaluator().evaluate(workspace.root);
+      if (result.rulesChecked === 0) {
+        return {
+          name: "architecture",
+          status: "skipped",
+          durationMs: Date.now() - started,
+        };
+      }
+      if (result.ok) {
+        return {
+          name: "architecture",
+          status: "passed",
+          stdout: `${result.rulesChecked} rule(s) checked`,
+          durationMs: Date.now() - started,
+        };
+      }
+      return {
+        name: "architecture",
+        status: "failed",
+        stderr: result.violations
+          .map((v) => `${v.ruleId}: ${v.fromFile} → ${v.toFile} (${v.description})`)
+          .join("\n"),
+        durationMs: Date.now() - started,
+      };
+    } catch (err) {
+      return {
+        name: "architecture",
+        status: "failed",
+        stderr: err instanceof Error ? err.message : String(err),
+        durationMs: Date.now() - started,
       };
     }
   }

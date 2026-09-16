@@ -191,6 +191,31 @@ CREATE TABLE IF NOT EXISTS failure_corpus (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS restricted_approvals (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  risk TEXT NOT NULL,
+  evidence TEXT,
+  requesting_agent TEXT,
+  status TEXT NOT NULL,
+  decision_maker TEXT,
+  created_at TEXT NOT NULL,
+  resolved_at TEXT
+);
+CREATE TABLE IF NOT EXISTS skill_proposals (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  rationale TEXT NOT NULL,
+  proposed_content TEXT NOT NULL,
+  security_impacting INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  resolved_at TEXT,
+  decision_maker TEXT
+);
 `;
 
 function nowIso(): string {

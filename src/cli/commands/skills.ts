@@ -6,6 +6,10 @@ import {
   SkillRegistry,
   SkillRouter,
 } from "../../skills/index.js";
+import {
+  proposalsDir,
+  SkillImprovementService,
+} from "../../skills/improvement.js";
 import { loadDotEnv, resolveWorkspace } from "../env.js";
 
 export function registerSkills(program: Command): void {
@@ -75,6 +79,80 @@ export function registerSkills(program: Command): void {
         );
       }
     });
+
+  skills
+    .command("propose")
+    .description("Record a skill improvement proposal (never auto-installs)")
+    .requiredOption("--title <title>", "Proposal title")
+    .requiredOption("--rationale <text>", "Why this change")
+    .option("--content <json>", "Proposed skill.json content", "{}")
+    .option("--kind <kind>", "skill|context_strategy|...", "skill")
+    .action(
+      (opts: { title: string; rationale: string; content: string; kind: string }) => {
+        const { config } = loadRegistry();
+        const svc = new SkillImprovementService(config.dbPath);
+        svc.initialize();
+        const proposal = svc.propose({
+          kind: opts.kind as "skill",
+          title: opts.title,
+          rationale: opts.rationale,
+          proposedContent: opts.content,
+        });
+        svc.close();
+        console.log(
+          `${proposal.id}  pending  security=${proposal.securityImpacting}  ${proposal.title}`,
+        );
+      },
+    );
+
+  skills
+    .command("proposals")
+    .description("List skill improvement proposals")
+    .option("--status <status>", "pending|approved|rejected|installed")
+    .action((opts: { status?: string }) => {
+      const { config } = loadRegistry();
+      const svc = new SkillImprovementService(config.dbPath);
+      svc.initialize();
+      const list = svc.list(opts.status as "pending" | undefined);
+      svc.close();
+      if (list.length === 0) {
+        console.log("No proposals.");
+        return;
+      }
+      for (const p of list) {
+        console.log(
+          `${p.id}  ${p.status.padEnd(10)}  sec=${p.securityImpacting}  ${p.title}`,
+        );
+      }
+    });
+
+  skills
+    .command("apply-proposal")
+    .description("Approve and/or install a skill proposal (human only)")
+    .argument("<id>", "Proposal id")
+    .option("--approve", "Mark approved as operator", false)
+    .option("--install", "Install after approval", false)
+    .option("--as <who>", "Decision maker", "operator")
+    .action(
+      (id: string, opts: { approve: boolean; install: boolean; as: string }) => {
+        const { config, workspace } = loadRegistry();
+        const svc = new SkillImprovementService(config.dbPath);
+        svc.initialize();
+        if (opts.approve) {
+          const p = svc.resolve(id, "approved", opts.as);
+          console.log(`approved: ${p.id} by ${p.decisionMaker}`);
+        }
+        if (opts.install) {
+          const result = svc.install(id, proposalsDir(workspace));
+          console.log(`installed: ${result.path}`);
+        }
+        if (!opts.approve && !opts.install) {
+          console.error("Specify --approve and/or --install");
+          process.exitCode = 1;
+        }
+        svc.close();
+      },
+    );
 }
 
 function loadRegistry() {
