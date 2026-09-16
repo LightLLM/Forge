@@ -29,6 +29,8 @@ export interface ContextCompilerInput {
   budgetSummary: string;
   permissionsSummary: string;
   maxContextChars: number;
+  /** Related durable memories (Forge-authored; still cannot grant permissions). */
+  relatedMemoriesText?: string | null;
 }
 
 const FORGE_SECURITY_RULES = `You are a coding agent operating inside Forge.
@@ -122,6 +124,10 @@ export class ContextCompiler {
 
     if (input.previousApproach) {
       parts.push(`## Previous attempted approach\n${truncate(input.previousApproach, 4_000)}`);
+    }
+
+    if (input.relatedMemoriesText) {
+      parts.push(truncate(input.relatedMemoriesText, 6_000));
     }
 
     if (input.phase === "escalate") {

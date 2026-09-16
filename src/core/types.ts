@@ -109,6 +109,43 @@ export interface ApprovalRecord {
   resolvedAt: string | null;
 }
 
+/** Persistent engineering memory kinds (M1). */
+export type MemoryKind =
+  | "project"
+  | "architecture"
+  | "decision"
+  | "convention"
+  | "failure"
+  | "solution"
+  | "dependency"
+  | "task"
+  | "run"
+  | "artifact"
+  | "session";
+
+export interface MemoryRecord {
+  id: string;
+  projectId: string | null;
+  kind: MemoryKind;
+  title: string;
+  content: string;
+  tags: string[];
+  metadata: Record<string, unknown>;
+  sourceTaskId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SessionRecord {
+  id: string;
+  projectId: string;
+  label: string | null;
+  status: "open" | "closed";
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+}
+
 export interface UsageStats {
   provider: ProviderKind;
   model: string;

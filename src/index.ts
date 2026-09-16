@@ -15,6 +15,7 @@ export type { ApprovalGate, ApprovalsConfig, ApprovalMode } from "./policy/appro
 export { loadToolPacks } from "./tools/packs.js";
 export { openStore } from "./persistence/factory.js";
 export { PostgresStore, POSTGRES_SCHEMA_SQL } from "./persistence/postgres.js";
+export { MemoryService, formatMemoriesForContext } from "./memory/service.js";
 export { buildDockerRunArgs } from "./tools/sandbox.js";
 export { rankRelevantFiles } from "./context/relevance.js";
 export { hasPlaywright, VerificationEngine } from "./verification/engine.js";

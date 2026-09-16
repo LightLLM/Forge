@@ -27,6 +27,10 @@ import { VerificationEngine } from "../verification/engine.js";
 import { Workspace } from "../workspace/workspace.js";
 import { createTaskBranch } from "../workspace/git.js";
 import type { SandboxOptions } from "../tools/sandbox.js";
+import {
+  formatMemoriesForContext,
+  MemoryService,
+} from "../memory/service.js";
 
 export interface OrchestratorDeps {
   store: PersistenceStore;
@@ -74,6 +78,8 @@ export class TaskOrchestrator {
     this.tools = await loadToolPacks(workspacePath, config.tools.packs);
 
     const project = store.upsertProject(workspacePath, basename(workspacePath));
+    const memory = new MemoryService(store);
+    const session = memory.openSession(project.id, `task:${options.objective.slice(0, 60)}`);
     let task = store.createTask({
       projectId: project.id,
       objective: options.objective,
@@ -91,7 +97,12 @@ export class TaskOrchestrator {
     store.appendEvent(task.id, "task_created", {
       objective: task.objective,
       mode: task.routingMode,
+      sessionId: session.id,
     });
+    store.appendEvent(task.id, "session_bound", { sessionId: session.id });
+
+    let recordedFailureId: string | null = null;
+    let sawVerificationFailure = false;
 
     if (config.git.createTaskBranch) {
       const branchResult = await createTaskBranch(workspace, task.id);
@@ -241,6 +252,18 @@ export class TaskOrchestrator {
           break;
         }
 
+        sawVerificationFailure = true;
+        const failureMem = memory.writeFailure({
+          projectId: project.id,
+          taskId: task.id,
+          objective: task.objective,
+          verification: lastVerification,
+        });
+        recordedFailureId = failureMem.id;
+        store.appendEvent(task.id, "memory_failure_recorded", {
+          memoryId: failureMem.id,
+        });
+
         // Failed verification — attempt repair if budget remains
         const repairViolation = budgets.beginRepair();
         if (!repairViolation) {
@@ -378,12 +401,42 @@ export class TaskOrchestrator {
       store.createArtifact(task.id, "diff", finalDiff);
     }
 
+    const finalTask = store.getTask(task.id)!;
+    if (finalTask.status === "COMPLETED" && sawVerificationFailure) {
+      const solution = memory.writeSolution({
+        projectId: project.id,
+        taskId: finalTask.id,
+        objective: finalTask.objective,
+        summary: lastSummary ?? "Repaired after verification failure",
+        relatedFailureId: recordedFailureId,
+      });
+      store.appendEvent(finalTask.id, "memory_solution_recorded", {
+        memoryId: solution.id,
+        relatedFailureId: recordedFailureId,
+      });
+    }
+    memory.writeTaskOutcome({
+      projectId: project.id,
+      taskId: finalTask.id,
+      objective: finalTask.objective,
+      status: finalTask.status,
+      summary:
+        lastSummary ??
+        finalTask.error ??
+        (finalTask.status === "COMPLETED" ? "Task completed" : "Task ended"),
+    });
+    try {
+      store.closeSession(session.id);
+    } catch {
+      // session may already be closed
+    }
+
     store.appendEvent(task.id, "task_finished", {
-      status: task.status,
+      status: finalTask.status,
       escalated,
+      sessionId: session.id,
     });
 
-    const finalTask = store.getTask(task.id)!;
     return {
       task: finalTask,
       verification: lastVerification,
@@ -457,6 +510,23 @@ export class TaskOrchestrator {
       pidsLimit: config.commands.dockerPidsLimit,
     };
 
+    const memory = new MemoryService(store);
+    const memoryHits = memory.retrieveForTask({
+      projectId: args.task.projectId,
+      objective: args.task.objective,
+      phase: args.phase,
+      verification: args.verification,
+      limit: 6,
+    });
+    const relatedMemoriesText = formatMemoriesForContext(memoryHits);
+    if (memoryHits.length > 0) {
+      store.appendEvent(args.task.id, "memory_retrieved", {
+        count: memoryHits.length,
+        ids: memoryHits.map((h) => h.memory.id),
+        phase: args.phase,
+      });
+    }
+
     const result = await this.agentLoop.run({
       task: args.task,
       runId: run.id,
@@ -474,6 +544,7 @@ export class TaskOrchestrator {
       phase: args.phase,
       verification: args.verification,
       previousApproach: args.previousApproach,
+      relatedMemoriesText: relatedMemoriesText || null,
       maxContextChars: config.limits.maxContextChars,
       commandTimeoutMs: config.limits.commandTimeoutMs,
       maxCommandOutputChars: config.limits.maxCommandOutputChars,

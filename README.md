@@ -211,6 +211,11 @@ Model self-reports are never treated as success.
 | `forge approvals [task-id]` | List pending approvals |
 | `forge approve <id>` | Approve a queued tool call |
 | `forge deny <id>` | Deny a queued tool call |
+| `forge memory list` | List engineering memories |
+| `forge memory search <q>` | Keyword search memories |
+| `forge memory inspect <id>` | Show one memory |
+| `forge memory prune` | Retention prune (`--keep-latest` / `--older-than-days`) |
+| `forge memory write` | Manually write project/decision memory |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -230,12 +235,13 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.3)
+## Limitations (v0.4)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
+- Memory retrieval is keyword-based (no vector DB yet)
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure
@@ -247,7 +253,7 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 
 ## Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md).
+See [docs/roadmap.md](docs/roadmap.md) and [docs/MILESTONES.md](docs/MILESTONES.md).
 
 ## License
 

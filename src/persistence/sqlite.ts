@@ -6,16 +6,23 @@ import type {
   ApprovalRecord,
   ArtifactRecord,
   EventRecord,
+  MemoryKind,
+  MemoryRecord,
   ProjectRecord,
   RunRecord,
+  SessionRecord,
   TaskRecord,
   TaskStatus,
 } from "../core/types.js";
 import { assertTransition } from "../core/state/machine.js";
 import type {
+  CreateMemoryInput,
   CreateRunInput,
   CreateTaskInput,
+  ListMemoriesOptions,
   PersistenceStore,
+  PruneMemoriesOptions,
+  SearchMemoriesOptions,
 } from "./store.js";
 
 function nowIso(): string {
@@ -116,9 +123,35 @@ export class SqliteStore implements PersistenceStore {
         resolved_at TEXT
       );
 
+      CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id),
+        label TEXT,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        closed_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS memories (
+        id TEXT PRIMARY KEY,
+        project_id TEXT REFERENCES projects(id),
+        kind TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        tags TEXT NOT NULL,
+        metadata TEXT NOT NULL,
+        source_task_id TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
       CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
       CREATE INDEX IF NOT EXISTS idx_events_task ON events(task_id);
       CREATE INDEX IF NOT EXISTS idx_runs_task ON runs(task_id);
+      CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id);
+      CREATE INDEX IF NOT EXISTS idx_memories_kind ON memories(kind);
+      CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id);
     `);
   }
 
@@ -634,6 +667,181 @@ export class SqliteStore implements PersistenceStore {
       resolvedAt: row.resolved_at,
     }));
   }
+
+  createSession(projectId: string, label: string | null = null): SessionRecord {
+    const ts = nowIso();
+    const record: SessionRecord = {
+      id: randomUUID(),
+      projectId,
+      label,
+      status: "open",
+      createdAt: ts,
+      updatedAt: ts,
+      closedAt: null,
+    };
+    this.db
+      .prepare(
+        `INSERT INTO sessions (id, project_id, label, status, created_at, updated_at, closed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        record.id,
+        record.projectId,
+        record.label,
+        record.status,
+        record.createdAt,
+        record.updatedAt,
+        record.closedAt,
+      );
+    return record;
+  }
+
+  getSession(id: string): SessionRecord | null {
+    const row = this.db.prepare(`SELECT * FROM sessions WHERE id = ?`).get(id) as
+      | Record<string, unknown>
+      | undefined;
+    return row ? mapSession(row) : null;
+  }
+
+  listSessions(
+    projectId?: string,
+    status?: SessionRecord["status"],
+  ): SessionRecord[] {
+    let sql = `SELECT * FROM sessions WHERE 1=1`;
+    const params: string[] = [];
+    if (projectId) {
+      sql += ` AND project_id = ?`;
+      params.push(projectId);
+    }
+    if (status) {
+      sql += ` AND status = ?`;
+      params.push(status);
+    }
+    sql += ` ORDER BY created_at DESC`;
+    const rows = this.db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
+    return rows.map(mapSession);
+  }
+
+  closeSession(id: string): SessionRecord {
+    const ts = nowIso();
+    this.db
+      .prepare(
+        `UPDATE sessions SET status = 'closed', updated_at = ?, closed_at = ? WHERE id = ?`,
+      )
+      .run(ts, ts, id);
+    const updated = this.getSession(id);
+    if (!updated) throw new Error(`Session not found: ${id}`);
+    return updated;
+  }
+
+  createMemory(input: CreateMemoryInput): MemoryRecord {
+    const ts = nowIso();
+    const record: MemoryRecord = {
+      id: randomUUID(),
+      projectId: input.projectId ?? null,
+      kind: input.kind,
+      title: input.title,
+      content: input.content,
+      tags: input.tags ?? [],
+      metadata: input.metadata ?? {},
+      sourceTaskId: input.sourceTaskId ?? null,
+      createdAt: ts,
+      updatedAt: ts,
+    };
+    this.db
+      .prepare(
+        `INSERT INTO memories
+         (id, project_id, kind, title, content, tags, metadata, source_task_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        record.id,
+        record.projectId,
+        record.kind,
+        record.title,
+        record.content,
+        JSON.stringify(record.tags),
+        JSON.stringify(record.metadata),
+        record.sourceTaskId,
+        record.createdAt,
+        record.updatedAt,
+      );
+    return record;
+  }
+
+  getMemory(id: string): MemoryRecord | null {
+    const row = this.db.prepare(`SELECT * FROM memories WHERE id = ?`).get(id) as
+      | Record<string, unknown>
+      | undefined;
+    return row ? mapMemory(row) : null;
+  }
+
+  listMemories(opts: ListMemoriesOptions = {}): MemoryRecord[] {
+    let sql = `SELECT * FROM memories WHERE 1=1`;
+    const params: string[] = [];
+    if (opts.projectId) {
+      sql += ` AND project_id = ?`;
+      params.push(opts.projectId);
+    }
+    if (opts.kind) {
+      sql += ` AND kind = ?`;
+      params.push(opts.kind);
+    }
+    sql += ` ORDER BY created_at DESC`;
+    if (opts.limit != null) {
+      sql += ` LIMIT ?`;
+      params.push(String(opts.limit));
+    }
+    const rows = this.db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
+    return rows.map(mapMemory);
+  }
+
+  searchMemories(query: string, opts: SearchMemoriesOptions = {}): MemoryRecord[] {
+    const tokens = tokenize(query);
+    const candidates = this.listMemories({
+      projectId: opts.projectId,
+      kind: opts.kind,
+      limit: Math.max(opts.limit ?? 20, 100),
+    });
+    const scored = candidates
+      .map((m) => ({ memory: m, score: scoreMemory(m, tokens, query) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+    return scored.slice(0, opts.limit ?? 20).map((x) => x.memory);
+  }
+
+  deleteMemory(id: string): boolean {
+    const result = this.db.prepare(`DELETE FROM memories WHERE id = ?`).run(id);
+    return Number(result.changes) > 0;
+  }
+
+  pruneMemories(opts: PruneMemoriesOptions): number {
+    if (opts.olderThanDays == null && opts.keepLatest == null) {
+      throw new Error("pruneMemories requires olderThanDays and/or keepLatest");
+    }
+    let candidates = this.listMemories({
+      projectId: opts.projectId,
+      kind: opts.kind,
+    });
+    if (opts.keepLatest != null) {
+      const keepIds = new Set(
+        candidates.slice(0, Math.max(0, opts.keepLatest)).map((m) => m.id),
+      );
+      candidates = candidates.filter((m) => !keepIds.has(m.id));
+    }
+    if (opts.olderThanDays != null) {
+      const cutoff = Date.now() - opts.olderThanDays * 86_400_000;
+      candidates = candidates.filter(
+        (m) => new Date(m.createdAt).getTime() < cutoff,
+      );
+    }
+    if (opts.dryRun) return candidates.length;
+    let removed = 0;
+    for (const m of candidates) {
+      if (this.deleteMemory(m.id)) removed += 1;
+    }
+    return removed;
+  }
 }
 
 function mapTask(row: Record<string, unknown>): TaskRecord {
@@ -682,4 +890,52 @@ function mapRun(row: Record<string, unknown>): RunRecord {
     escalationReason: (row.escalation_reason as string | null) ?? null,
     error: (row.error as string | null) ?? null,
   };
+}
+
+function mapSession(row: Record<string, unknown>): SessionRecord {
+  return {
+    id: String(row.id),
+    projectId: String(row.project_id),
+    label: (row.label as string | null) ?? null,
+    status: row.status as SessionRecord["status"],
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+    closedAt: (row.closed_at as string | null) ?? null,
+  };
+}
+
+function mapMemory(row: Record<string, unknown>): MemoryRecord {
+  return {
+    id: String(row.id),
+    projectId: (row.project_id as string | null) ?? null,
+    kind: row.kind as MemoryKind,
+    title: String(row.title),
+    content: String(row.content),
+    tags: JSON.parse(String(row.tags)) as string[],
+    metadata: JSON.parse(String(row.metadata)) as Record<string, unknown>,
+    sourceTaskId: (row.source_task_id as string | null) ?? null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9_/-]+/)
+    .filter((t) => t.length > 2);
+}
+
+function scoreMemory(memory: MemoryRecord, tokens: string[], rawQuery: string): number {
+  if (tokens.length === 0 && !rawQuery.trim()) return 0;
+  const hay = `${memory.title}\n${memory.content}\n${memory.tags.join(" ")}`.toLowerCase();
+  let score = 0;
+  for (const t of tokens) {
+    if (hay.includes(t)) score += 1;
+    if (memory.title.toLowerCase().includes(t)) score += 1;
+    if (memory.tags.some((tag) => tag.toLowerCase().includes(t))) score += 2;
+  }
+  const q = rawQuery.trim().toLowerCase();
+  if (q && hay.includes(q)) score += 3;
+  return score;
 }

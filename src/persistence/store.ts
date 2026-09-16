@@ -2,8 +2,11 @@ import type {
   ApprovalRecord,
   ArtifactRecord,
   EventRecord,
+  MemoryKind,
+  MemoryRecord,
   ProjectRecord,
   RunRecord,
+  SessionRecord,
   TaskRecord,
   TaskStatus,
 } from "../core/types.js";
@@ -102,4 +105,46 @@ export interface PersistenceStore {
   ): ApprovalRecord;
   listApprovals(taskId: string): ApprovalRecord[];
   listPendingApprovals(taskId?: string): ApprovalRecord[];
+
+  createSession(projectId: string, label?: string | null): SessionRecord;
+  getSession(id: string): SessionRecord | null;
+  listSessions(projectId?: string, status?: SessionRecord["status"]): SessionRecord[];
+  closeSession(id: string): SessionRecord;
+
+  createMemory(input: CreateMemoryInput): MemoryRecord;
+  getMemory(id: string): MemoryRecord | null;
+  listMemories(opts?: ListMemoriesOptions): MemoryRecord[];
+  searchMemories(query: string, opts?: SearchMemoriesOptions): MemoryRecord[];
+  deleteMemory(id: string): boolean;
+  pruneMemories(opts: PruneMemoriesOptions): number;
+}
+
+export interface CreateMemoryInput {
+  projectId?: string | null;
+  kind: MemoryKind;
+  title: string;
+  content: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  sourceTaskId?: string | null;
+}
+
+export interface ListMemoriesOptions {
+  projectId?: string;
+  kind?: MemoryKind;
+  limit?: number;
+}
+
+export interface SearchMemoriesOptions {
+  projectId?: string;
+  kind?: MemoryKind;
+  limit?: number;
+}
+
+export interface PruneMemoriesOptions {
+  kind?: MemoryKind;
+  projectId?: string;
+  olderThanDays?: number;
+  keepLatest?: number;
+  dryRun?: boolean;
 }

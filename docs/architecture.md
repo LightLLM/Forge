@@ -25,6 +25,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/config` | Zod-validated config + env/CLI merge |
 | `src/core` | Domain types, state machine, budgets |
 | `src/persistence` | `PersistenceStore` interface + SQLite impl |
+| `src/memory` | Sessions + durable engineering memory |
 | `src/models` | Provider-neutral inference + deterministic router |
 | `src/context` | Context compiler (not full-repo dumps) |
 | `src/policy` | Authorization decisions |
@@ -36,7 +37,9 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 
 ## Persistence
 
-SQLite via Node's built-in `node:sqlite` (`DatabaseSync`) stores `projects`, `tasks`, `runs`, `events`, `artifacts`, `approvals`. No native addon is required.
+SQLite via Node's built-in `node:sqlite` (`DatabaseSync`) stores `projects`, `tasks`, `runs`, `events`, `artifacts`, `approvals`, `sessions`, and `memories`. No native addon is required.
+
+Durable engineering memory (project/decision/failure/solution/…) is retrievable across tasks and injected into the context compiler as labeled DATA. See [ADR 004](adr/004-memory.md) and [MILESTONES.md](MILESTONES.md).
 
 The `PersistenceStore` interface is designed so PostgreSQL can replace SQLite later without changing the orchestrator.
 

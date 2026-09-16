@@ -38,6 +38,7 @@ export interface AgentLoopOptions {
   phase: "implement" | "repair" | "escalate";
   verification?: VerificationResult | null;
   previousApproach?: string | null;
+  relatedMemoriesText?: string | null;
   maxContextChars: number;
   commandTimeoutMs: number;
   maxCommandOutputChars: number;
@@ -100,6 +101,7 @@ export class AgentLoop {
       phase,
       verification: options.verification,
       previousApproach: options.previousApproach,
+      relatedMemoriesText: options.relatedMemoriesText,
       diffSummary,
       budgetSummary: formatBudget(budgets),
       permissionsSummary:

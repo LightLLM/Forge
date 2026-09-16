@@ -7,13 +7,14 @@ import { registerStatus } from "./commands/status.js";
 import { registerInspect } from "./commands/inspect.js";
 import { registerModels } from "./commands/models.js";
 import { registerApprovals } from "./commands/approvals.js";
+import { registerMemory } from "./commands/memory.js";
 
 const program = new Command();
 
 program
   .name("forge")
   .description("Local-first hybrid autonomous software-engineering harness")
-  .version("0.3.0");
+  .version("0.4.0");
 
 registerInit(program);
 registerDoctor(program);
@@ -22,6 +23,7 @@ registerStatus(program);
 registerInspect(program);
 registerModels(program);
 registerApprovals(program);
+registerMemory(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);
