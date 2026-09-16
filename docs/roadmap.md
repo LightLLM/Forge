@@ -49,7 +49,7 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge mcp list|inspect|test|enable|disable`
 - Fixture: `fixtures/mcp-echo-server`
 
-## v0.7 / M4 (this release)
+## v0.7 / M4 (shipped)
 
 **Git worktrees**
 
@@ -58,8 +58,18 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge worktrees list|cleanup|leases|conflicts`
 - Dirty worktrees never force-deleted by default
 
+## v0.8 / M5 (this release)
+
+**Task DAG + parallel workers**
+
+- Explicit dependency graphs with cycle checks
+- Scheduler with `scheduler.maxParallelWorkers` (default 2)
+- Deterministic decomposition + plan JSON
+- CLI: `forge graph validate|run`
+- Fixture: `fixtures/multi-part-plan`
+
 ## Later
 
-- M5 task DAG + parallel workers, daemon, goal mode (see milestones)
+- M6 specialized agents, daemon, goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

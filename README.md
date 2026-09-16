@@ -137,6 +137,9 @@ See [docs/model-routing.md](docs/model-routing.md).
     "timeoutMinutes": 30,
     "maxCloudCostUsd": 1
   },
+  "scheduler": {
+    "maxParallelWorkers": 2
+  },
   "verification": {
     "typecheck": true,
     "lint": true,
@@ -229,6 +232,8 @@ Model self-reports are never treated as success.
 | `forge worktrees cleanup` | Prune abandoned worktrees (skips dirty) |
 | `forge worktrees leases` | Show lease for current workspace |
 | `forge worktrees conflicts <a> <b>` | Overlapping changed paths |
+| `forge graph validate [plan]` | Validate a task DAG |
+| `forge graph run <plan>` | Execute a task DAG (directive nodes) |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -248,9 +253,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.7)
+## Limitations (v0.8)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -258,6 +263,7 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - Skills are guidance only (no skill-declared tools/permissions); selection is keyword/signal based
 - MCP is stdio-only with explicit allowlists; outputs are untrusted DATA
 - Worktrees are opt-in (`git.useWorktrees`); no automatic merge yet
+- Task graphs use deterministic decomposition / plan JSON; CLI graph run uses directive executor (not full agent loop per node yet)
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure

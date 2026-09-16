@@ -31,6 +31,12 @@ export const ForgeConfigSchema = z.object({
       commandTimeoutMs: z.number().int().positive().default(120_000),
     })
     .default({}),
+  scheduler: z
+    .object({
+      /** Max concurrent DAG nodes (conservative default). */
+      maxParallelWorkers: z.number().int().positive().default(2),
+    })
+    .default({}),
   verification: z
     .object({
       typecheck: z.boolean().default(true),
@@ -263,6 +269,9 @@ export function defaultConfigJson(): string {
         maxRepairs: 2,
         timeoutMinutes: 30,
         maxCloudCostUsd: 1,
+      },
+      scheduler: {
+        maxParallelWorkers: 2,
       },
       verification: {
         typecheck: true,

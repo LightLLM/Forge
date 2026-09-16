@@ -46,6 +46,14 @@ export { WorktreeManager } from "./workspace/worktree.js";
 export { WorkspaceLease } from "./workspace/lease.js";
 export { ConflictDetector } from "./workspace/conflict.js";
 export { IntegrationManager } from "./workspace/integration.js";
+export {
+  TaskGraph,
+  TaskScheduler,
+  DeterministicDecomposer,
+  runTaskGraph,
+  loadSpec,
+} from "./scheduler/index.js";
+export { createDirectiveExecutor } from "./scheduler/executors.js";
 export { BudgetTracker } from "./core/budgets/tracker.js";
 export {
   assertTransition,

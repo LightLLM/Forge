@@ -11,7 +11,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M2 | Skills | [✓] | 2026-09-16 |
 | M3 | MCP Gateway | [✓] | 2026-09-16 |
 | M4 | Worktrees | [✓] | 2026-09-16 |
-| M5 | Task DAG + Parallel Workers | [ ] | |
+| M5 | Task DAG + Parallel Workers | [✓] | 2026-09-16 |
 | M6 | Specialized Agents | [ ] | |
 | M7 | Browser QA | [ ] | |
 | M8 | Persistent Daemon | [ ] | |
@@ -75,6 +75,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** no auto-merge/PR; leases are file-based without daemon heartbeat yet
 - **Completion date:** 2026-09-16
 
+## M5 — Task DAG + Parallel Workers
+
+- **Status:** complete
+- **Scope:** TaskGraph, DeterministicDecomposer, TaskScheduler, directive executor, `forge graph` CLI, multi-part fixture
+- **Tests:** existing suite + `tests/m5-dag.test.ts`
+- **E2E evidence:** multi-part plan runs alpha∥beta then combine; parallel observed=2; failure blocks dependents; cycle/missing-dep rejected
+- **Limitations:** no LLM planner yet; graph executor for CLI is directive-based (agent-backed node execution deferred)
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M5 — Task DAG + Parallel Workers** (decomposition, dependency graph, scheduler, parallel execution)
+**M6 — Specialized Agents** (architect, planner, implementer, debugger, tester, reviewer)
