@@ -97,7 +97,7 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge daemon start|status|stop|enqueue`
 - Config: `daemon.maxWorkers`, poll/heartbeat/stale intervals
 
-## v0.12 / M9 (this release)
+## v0.12 / M9 (shipped)
 
 **Background jobs**
 
@@ -107,8 +107,18 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge jobs catalog|run|schedule|schedules|…`
 - Fixture: `fixtures/scheduled-repo`
 
+## v0.13 / M10 (this release)
+
+**Execution backends**
+
+- `ExecutionBackend` interface: createWorkspace / execute / destroy
+- Local + Docker implementations; Remote adapter stub (vendor-neutral)
+- `executeCommand` routes through the shared interface
+- CLI: `forge exec backends|run`
+- Config: `execution.backend`, `execution.remote`
+
 ## Later
 
-- M10 remote execution / goal mode (see milestones)
+- M11 goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

@@ -16,7 +16,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M7 | Browser QA | [✓] | 2026-09-16 |
 | M8 | Persistent Daemon | [✓] | 2026-09-16 |
 | M9 | Background Jobs | [✓] | 2026-09-16 |
-| M10 | Remote Execution | [ ] | |
+| M10 | Remote Execution | [✓] | 2026-09-16 |
 | M11 | Goal Mode | [ ] | |
 | M12 | Model Evaluation | [ ] | |
 | M13 | Adaptive Router | [ ] | |
@@ -120,6 +120,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** interval schedules only (no cron); analyses are heuristic/report-only; no auto-remediation
 - **Completion date:** 2026-09-16
 
+## M10 — Remote Execution
+
+- **Status:** complete
+- **Scope:** ExecutionBackend abstraction; Local + Docker implementations; Remote adapter stub; CLI `forge exec`
+- **Tests:** existing suite + `tests/m10-execution.test.ts`
+- **E2E evidence:** local and docker share createWorkspace/execute/destroy; local run succeeds; remote stub rejects when unconfigured
+- **Limitations:** remote provider not connected; legacy `commands.sandbox` still the primary config knob for agent runs
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M10 — Remote Execution** (execution backend abstraction)
+**M11 — Goal Mode** (`forge goal`)

@@ -1,5 +1,14 @@
-import { spawn } from "node:child_process";
-import { platform } from "node:os";
+import type { ExecutionBackendKind } from "../execution/types.js";
+import {
+  buildDockerRunArgs as buildDockerRunArgsImpl,
+  isDockerAvailable as isDockerAvailableImpl,
+  resetDockerAvailabilityCache as resetDockerAvailabilityCacheImpl,
+} from "../execution/docker.js";
+import {
+  resolveExecutionBackend,
+  sandboxModeToExecutionMode,
+} from "../execution/factory.js";
+import { runWithBackend } from "../execution/run.js";
 
 export type SandboxMode = "auto" | "host" | "docker";
 
@@ -37,34 +46,13 @@ export interface CommandRunContext {
   sandbox?: SandboxOptions;
 }
 
-let dockerAvailableCache: boolean | null = null;
-
 export async function isDockerAvailable(): Promise<boolean> {
-  if (dockerAvailableCache != null) return dockerAvailableCache;
-  dockerAvailableCache = await new Promise<boolean>((resolve) => {
-    const child = spawn("docker", ["info"], {
-      windowsHide: true,
-      stdio: "ignore",
-    });
-    const timer = setTimeout(() => {
-      child.kill();
-      resolve(false);
-    }, 4_000);
-    child.on("error", () => {
-      clearTimeout(timer);
-      resolve(false);
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve(code === 0);
-    });
-  });
-  return dockerAvailableCache;
+  return isDockerAvailableImpl();
 }
 
 /** Reset cache (tests). */
 export function resetDockerAvailabilityCache(): void {
-  dockerAvailableCache = null;
+  resetDockerAvailabilityCacheImpl();
 }
 
 export async function resolveCommandBackend(
@@ -78,53 +66,44 @@ export async function resolveCommandBackend(
     }
     return "docker";
   }
-  // auto
   return (await isDockerAvailable()) ? "docker" : "host";
 }
 
+function mapBackendLabel(kind: ExecutionBackendKind): "host" | "docker" {
+  return kind === "docker" ? "docker" : "host";
+}
+
+/**
+ * Execute a shell command via the shared ExecutionBackend abstraction.
+ * Local and Docker share the same createWorkspace/execute/destroy interface.
+ */
 export async function executeCommand(
   command: string,
   ctx: CommandRunContext,
 ): Promise<CommandRunResult> {
-  const backend = await resolveCommandBackend(ctx.sandbox);
-  if (backend === "docker") {
-    return runDocker(command, ctx, ctx.sandbox!);
-  }
-  return runHost(command, ctx);
-}
-
-function runHost(command: string, ctx: CommandRunContext): Promise<CommandRunResult> {
-  const isWin = platform() === "win32";
-  const file = isWin ? "cmd.exe" : "/bin/sh";
-  const args = isWin ? ["/d", "/s", "/c", command] : ["-c", command];
-
-  return spawnCaptured(file, args, {
-    cwd: ctx.workspaceRoot,
-    env: scrubEnv(process.env),
+  const sandbox = ctx.sandbox ?? {
+    mode: "host" as const,
+    image: "node:22-bookworm-slim",
+    networkDisabled: true,
+  };
+  const backend = await resolveExecutionBackend({
+    mode: sandboxModeToExecutionMode(sandbox.mode),
+    sandbox,
+  });
+  const result = await runWithBackend(backend, ctx.workspaceRoot, {
     command,
-    backend: "host",
     timeoutMs: ctx.commandTimeoutMs,
-    maxOutput: ctx.maxCommandOutputChars,
+    maxOutputChars: ctx.maxCommandOutputChars,
     signal: ctx.signal,
   });
-}
-
-function runDocker(
-  command: string,
-  ctx: CommandRunContext,
-  sandbox: SandboxOptions,
-): Promise<CommandRunResult> {
-  const args = buildDockerRunArgs(command, ctx.workspaceRoot, sandbox);
-
-  return spawnCaptured("docker", args, {
-    cwd: ctx.workspaceRoot,
-    env: scrubEnv(process.env),
-    command,
-    backend: "docker",
-    timeoutMs: ctx.commandTimeoutMs,
-    maxOutput: ctx.maxCommandOutputChars,
-    signal: ctx.signal,
-  });
+  return {
+    command: result.command,
+    exitCode: result.exitCode,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    timedOut: result.timedOut,
+    backend: mapBackendLabel(result.backend),
+  };
 }
 
 /** Exported for tests — constructs `docker run` argv. */
@@ -133,104 +112,11 @@ export function buildDockerRunArgs(
   workspaceRoot: string,
   sandbox: SandboxOptions,
 ): string[] {
-  const mount = toDockerMount(workspaceRoot);
-  const hardened = sandbox.hardened !== false;
-  const args = ["run", "--rm"];
-
-  if (hardened) {
-    args.push(
-      "--security-opt",
-      "no-new-privileges",
-      "--cap-drop",
-      "ALL",
-      "--read-only",
-      "--tmpfs",
-      "/tmp:rw,noexec,nosuid,size=256m",
-      "--pids-limit",
-      String(sandbox.pidsLimit ?? 256),
-      "--memory",
-      sandbox.memoryLimit ?? "2g",
-    );
-  }
-
-  args.push("-v", `${mount}:/workspace`, "-w", "/workspace");
-
-  if (sandbox.networkDisabled) {
-    args.push("--network", "none");
-  }
-  args.push(sandbox.image, "sh", "-c", command);
-  return args;
-}
-
-function toDockerMount(hostPath: string): string {
-  // Docker Desktop on Windows accepts forward-slash paths.
-  if (platform() === "win32") {
-    return hostPath.replace(/\\/g, "/");
-  }
-  return hostPath;
-}
-
-function spawnCaptured(
-  file: string,
-  args: string[],
-  opts: {
-    cwd: string;
-    env: NodeJS.ProcessEnv;
-    command: string;
-    backend: "host" | "docker";
-    timeoutMs: number;
-    maxOutput: number;
-    signal?: AbortSignal;
-  },
-): Promise<CommandRunResult> {
-  return new Promise((resolvePromise, reject) => {
-    const child = spawn(file, args, {
-      cwd: opts.cwd,
-      env: opts.env,
-      windowsHide: true,
-      signal: opts.signal,
-    });
-
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-    const max = opts.maxOutput;
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill();
-    }, opts.timeoutMs);
-
-    child.stdout.on("data", (chunk: Buffer) => {
-      if (stdout.length < max) stdout += chunk.toString("utf8");
-    });
-    child.stderr.on("data", (chunk: Buffer) => {
-      if (stderr.length < max) stderr += chunk.toString("utf8");
-    });
-
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolvePromise({
-        command: opts.command,
-        exitCode: code,
-        stdout: stdout.slice(0, max),
-        stderr: stderr.slice(0, max),
-        timedOut,
-        backend: opts.backend,
-      });
-    });
+  return buildDockerRunArgsImpl(command, workspaceRoot, {
+    image: sandbox.image,
+    networkDisabled: sandbox.networkDisabled,
+    hardened: sandbox.hardened,
+    memoryLimit: sandbox.memoryLimit,
+    pidsLimit: sandbox.pidsLimit,
   });
-}
-
-function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const out: NodeJS.ProcessEnv = { ...env };
-  delete out.OPENROUTER_API_KEY;
-  delete out.ANTHROPIC_API_KEY;
-  delete out.OPENAI_API_KEY;
-  return out;
 }

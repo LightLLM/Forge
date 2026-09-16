@@ -181,6 +181,8 @@ Priority: CLI flags > environment > `forge.config.json` > defaults.
 ```
 
 - `commands.sandbox`: `host` (default), `auto` (Docker when available), or `docker` (required)
+- `execution.backend`: `auto` | `local` | `docker` | `remote` (shared ExecutionBackend; remote is an adapter stub)
+- `execution.remote.endpoint` / `tokenEnv`: optional remote worker configuration (no vendor SDK)
 - `commands.dockerHardened`: drop capabilities, no-new-privileges, read-only rootfs + tmpfs (default `true`)
 - `verification.playwright`: run Playwright when detected (`auto`), force (`on`), or skip (`off`)
 - `verification.browserQa`: run Forge browser scenarios when present (`auto`), force (`on`), or skip (`off`)
@@ -250,6 +252,8 @@ Model self-reports are never treated as success.
 | `forge jobs run <id>` | Run analysis now (or `--enqueue`) |
 | `forge jobs schedule <id>` | Create recurring schedule |
 | `forge jobs schedules` | List schedules |
+| `forge exec backends` | List local/docker/remote backend availability |
+| `forge exec run "<cmd>"` | Run a command via ExecutionBackend |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -269,9 +273,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends (local/docker/remote adapter), and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.12)
+## Limitations (v0.13)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -284,6 +288,7 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - Browser QA uses stub driver by default; Playwright is optional when installed
 - Daemon job kinds include lightweight builtins + `analysis`; `agent_task` not wired to orchestrator yet
 - Background analyses are heuristic/report-only (interval schedules; no cron); they never auto-rewrite code
+- Remote ExecutionBackend is an adapter stub (no vendor provider connected yet)
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure

@@ -121,6 +121,21 @@ export const ForgeConfigSchema = z.object({
       dockerPidsLimit: z.number().int().positive().default(256),
     })
     .default({}),
+  execution: z
+    .object({
+      /**
+       * Preferred ExecutionBackend. `auto` uses Docker when available else local.
+       * When unset in file, falls back to mapping from commands.sandbox.
+       */
+      backend: z.enum(["auto", "local", "docker", "remote"]).default("auto"),
+      remote: z
+        .object({
+          endpoint: z.string().optional(),
+          tokenEnv: z.string().default("FORGE_REMOTE_EXEC_TOKEN"),
+        })
+        .default({}),
+    })
+    .default({}),
   git: z
     .object({
       createTaskBranch: z.boolean().default(false),
@@ -369,6 +384,12 @@ export function defaultConfigJson(): string {
         dockerHardened: true,
         dockerMemoryLimit: "2g",
         dockerPidsLimit: 256,
+      },
+      execution: {
+        backend: "auto",
+        remote: {
+          tokenEnv: "FORGE_REMOTE_EXEC_TOKEN",
+        },
       },
       git: {
         createTaskBranch: false,

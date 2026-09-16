@@ -46,6 +46,22 @@ export {
   resolveCommandBackend,
   executeCommand,
 } from "./tools/sandbox.js";
+export {
+  LocalExecutionBackend,
+  DockerExecutionBackend,
+  RemoteExecutionBackend,
+  resolveExecutionBackend,
+  runWithBackend,
+  listBackendKinds,
+  sandboxModeToExecutionMode,
+} from "./execution/index.js";
+export type {
+  ExecutionBackend,
+  ExecutionBackendKind,
+  ExecutionRequest,
+  ExecutionResult,
+  ExecutionWorkspaceHandle,
+} from "./execution/index.js";
 export { createTaskBranch, sanitizeTaskBranchName, runGit } from "./workspace/git.js";
 export { WorktreeManager } from "./workspace/worktree.js";
 export { WorkspaceLease } from "./workspace/lease.js";
