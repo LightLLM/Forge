@@ -38,6 +38,7 @@ import {
   SkillRegistry,
   SkillRouter,
 } from "../skills/index.js";
+import { McpGateway } from "../mcp/index.js";
 
 export interface OrchestratorDeps {
   store: PersistenceStore;
@@ -84,6 +85,28 @@ export class TaskOrchestrator {
 
     this.tools = await loadToolPacks(workspacePath, config.tools.packs);
 
+    let mcpGateway: McpGateway | null = null;
+    const mcpToolNames: string[] = [];
+    if (config.mcp.servers.some((s) => s.enabled)) {
+      mcpGateway = new McpGateway({
+        workspacePath,
+        servers: config.mcp.servers,
+      });
+      const mcpTools = await mcpGateway.loadTools();
+      const seen = new Set(this.tools.map((t) => t.name));
+      for (const tool of mcpTools) {
+        if (seen.has(tool.name)) {
+          throw new ForgeError(
+            `Duplicate tool name from MCP: ${tool.name}`,
+            "MCP_TOOL_CONFLICT",
+          );
+        }
+        seen.add(tool.name);
+        this.tools.push(tool);
+        mcpToolNames.push(tool.name);
+      }
+    }
+
     const project = store.upsertProject(workspacePath, basename(workspacePath));
     const memory = new MemoryService(store);
     const session = memory.openSession(project.id, `task:${options.objective.slice(0, 60)}`);
@@ -107,6 +130,12 @@ export class TaskOrchestrator {
       sessionId: session.id,
     });
     store.appendEvent(task.id, "session_bound", { sessionId: session.id });
+    if (mcpToolNames.length > 0) {
+      store.appendEvent(task.id, "mcp_tools_loaded", {
+        tools: mcpToolNames,
+        servers: config.mcp.servers.filter((s) => s.enabled).map((s) => s.id),
+      });
+    }
 
     let recordedFailureId: string | null = null;
     let sawVerificationFailure = false;
@@ -436,6 +465,10 @@ export class TaskOrchestrator {
       store.closeSession(session.id);
     } catch {
       // session may already be closed
+    }
+
+    if (mcpGateway) {
+      await mcpGateway.close().catch(() => undefined);
     }
 
     store.appendEvent(task.id, "task_finished", {

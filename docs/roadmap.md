@@ -30,7 +30,7 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge memory list|search|inspect|prune|write`
 - Tracker: [MILESTONES.md](MILESTONES.md)
 
-## v0.5 / M2 (this release)
+## v0.5 / M2 (shipped)
 
 **Skills system**
 
@@ -39,8 +39,18 @@ Approval gates, hardened Docker profiles, better relevance
 - Router loads only relevant skills into worker context
 - CLI: `forge skills list|inspect|match`
 
+## v0.6 / M3 (this release)
+
+**MCP gateway**
+
+- Minimal stdio MCP client (no full SDK)
+- Explicit `allowedTools` allowlist; disabled servers by default
+- Policy-wrapped `mcp__<server>__<tool>` names with risk/timeout/truncation
+- CLI: `forge mcp list|inspect|test|enable|disable`
+- Fixture: `fixtures/mcp-echo-server`
+
 ## Later
 
-- M3 MCP, worktrees, task DAG, daemon, goal mode (see milestones)
+- M4 worktrees, task DAG, daemon, goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

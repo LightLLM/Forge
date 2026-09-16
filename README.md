@@ -219,6 +219,10 @@ Model self-reports are never treated as success.
 | `forge skills list` | List built-in + workspace skills |
 | `forge skills inspect <id>` | Show skill metadata and body |
 | `forge skills match "<objective>"` | Preview skill selection |
+| `forge mcp list` | List configured MCP servers |
+| `forge mcp inspect <id>` | Advertise tools from a server |
+| `forge mcp test <id> --tool <name>` | Call an allowlisted MCP tool |
+| `forge mcp enable/disable <id>` | Toggle server in forge.config.json |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -238,14 +242,15 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.5)
+## Limitations (v0.6)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
 - Memory retrieval is keyword-based (no vector DB yet)
 - Skills are guidance only (no skill-declared tools/permissions); selection is keyword/signal based
+- MCP is stdio-only with explicit allowlists; outputs are untrusted DATA
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure

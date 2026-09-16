@@ -95,6 +95,32 @@ export const ForgeConfigSchema = z.object({
       exclude: z.array(z.string()).default([]),
     })
     .default({}),
+  mcp: z
+    .object({
+      servers: z
+        .array(
+          z.object({
+            id: z
+              .string()
+              .min(1)
+              .regex(/^[a-z0-9][a-z0-9_-]*$/i),
+            command: z.string().min(1),
+            args: z.array(z.string()).default([]),
+            env: z.record(z.string()).optional(),
+            cwd: z.string().optional(),
+            enabled: z.boolean().default(false),
+            /** Explicit allowlist — empty means no agent exposure. */
+            allowedTools: z.array(z.string()).default([]),
+            riskOverrides: z
+              .record(z.enum(["read", "write", "execute", "network"]))
+              .optional(),
+            timeoutMs: z.number().int().positive().optional(),
+            maxResultChars: z.number().int().positive().optional(),
+          }),
+        )
+        .default([]),
+    })
+    .default({}),
   databaseUrl: z.string().optional(),
   ui: z
     .object({
@@ -261,6 +287,9 @@ export function defaultConfigJson(): string {
       skills: {
         enabled: true,
         maxSkills: 4,
+      },
+      mcp: {
+        servers: [],
       },
       ui: {
         streamProgress: true,

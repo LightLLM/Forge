@@ -9,7 +9,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M0 | Baseline (v0 verify + docs) | [✓] | 2026-09-16 |
 | M1 | Persistent Engineering Memory | [✓] | 2026-09-16 |
 | M2 | Skills | [✓] | 2026-09-16 |
-| M3 | MCP Gateway | [ ] | |
+| M3 | MCP Gateway | [✓] | 2026-09-16 |
 | M4 | Worktrees | [ ] | |
 | M5 | Task DAG + Parallel Workers | [ ] | |
 | M6 | Specialized Agents | [ ] | |
@@ -57,6 +57,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** Keyword/signal routing only; skill scripts not executed; subset of planned skill catalog shipped as built-ins
 - **Completion date:** 2026-09-16
 
+## M3 — MCP Gateway
+
+- **Status:** complete
+- **Scope:** stdio MCP client; server registry; allowlisted policy wrapping; audit events; CLI; fixture echo server
+- **Tests:** existing suite + `tests/m3-mcp.test.ts`
+- **E2E evidence:** fixture server tools/list + echo call through McpGateway + PolicyEngine; non-allowlisted tools never registered; hostile MCP text does not grant network
+- **Limitations:** stdio only; no resources/prompts; no process pool across tasks
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M3 — MCP Gateway** (MCP client, server registry, policy wrapping, audit, CLI)
+**M4 — Worktrees** (`WorktreeManager`, workspace leases, cleanup, conflict detection)

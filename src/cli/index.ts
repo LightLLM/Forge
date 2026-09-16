@@ -9,13 +9,14 @@ import { registerModels } from "./commands/models.js";
 import { registerApprovals } from "./commands/approvals.js";
 import { registerMemory } from "./commands/memory.js";
 import { registerSkills } from "./commands/skills.js";
+import { registerMcp } from "./commands/mcp.js";
 
 const program = new Command();
 
 program
   .name("forge")
   .description("Local-first hybrid autonomous software-engineering harness")
-  .version("0.5.0");
+  .version("0.6.0");
 
 registerInit(program);
 registerDoctor(program);
@@ -26,6 +27,7 @@ registerModels(program);
 registerApprovals(program);
 registerMemory(program);
 registerSkills(program);
+registerMcp(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);

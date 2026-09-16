@@ -25,6 +25,14 @@ export {
   collectWorkspaceSignals,
   FORBIDDEN_SKILL_KEYS,
 } from "./skills/index.js";
+export {
+  McpGateway,
+  McpRegistry,
+  StdioMcpClient,
+  classifyMcpToolRisk,
+  mcpToolName,
+  setMcpServerEnabled,
+} from "./mcp/index.js";
 export { buildDockerRunArgs } from "./tools/sandbox.js";
 export { rankRelevantFiles } from "./context/relevance.js";
 export { hasPlaywright, VerificationEngine } from "./verification/engine.js";
