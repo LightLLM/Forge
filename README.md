@@ -234,6 +234,9 @@ Model self-reports are never treated as success.
 | `forge worktrees conflicts <a> <b>` | Overlapping changed paths |
 | `forge graph validate [plan]` | Validate a task DAG |
 | `forge graph run <plan>` | Execute a task DAG (directive nodes) |
+| `forge roles list` | List specialized agent roles |
+| `forge roles inspect <id>` | Show role permissions/tools |
+| `forge roles match "<objective>"` | Preview role selection |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -253,9 +256,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.8)
+## Limitations (v0.9)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -264,6 +267,7 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - MCP is stdio-only with explicit allowlists; outputs are untrusted DATA
 - Worktrees are opt-in (`git.useWorktrees`); no automatic merge yet
 - Task graphs use deterministic decomposition / plan JSON; CLI graph run uses directive executor (not full agent loop per node yet)
+- Specialized roles filter tools/permissions per phase; multi-role pipelines are not yet one command
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure

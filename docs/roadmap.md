@@ -58,7 +58,7 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge worktrees list|cleanup|leases|conflicts`
 - Dirty worktrees never force-deleted by default
 
-## v0.8 / M5 (this release)
+## v0.8 / M5 (shipped)
 
 **Task DAG + parallel workers**
 
@@ -68,8 +68,17 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge graph validate|run`
 - Fixture: `fixtures/multi-part-plan`
 
+## v0.9 / M6 (this release)
+
+**Specialized agents**
+
+- Roles: architect, planner, implementer, debugger, tester, reviewer
+- Distinct tools, permissions, context budgets, instructions
+- Phase role map via `agents.phaseRoles`
+- CLI: `forge roles list|inspect|match`
+
 ## Later
 
-- M6 specialized agents, daemon, goal mode (see milestones)
+- M7 browser QA, daemon, goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

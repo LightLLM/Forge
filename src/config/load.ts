@@ -37,6 +37,46 @@ export const ForgeConfigSchema = z.object({
       maxParallelWorkers: z.number().int().positive().default(2),
     })
     .default({}),
+  agents: z
+    .object({
+      /** Enable specialized role selection for agent phases. */
+      enabled: z.boolean().default(true),
+      phaseRoles: z
+        .object({
+          implement: z
+            .enum([
+              "architect",
+              "planner",
+              "implementer",
+              "debugger",
+              "tester",
+              "reviewer",
+            ])
+            .default("implementer"),
+          repair: z
+            .enum([
+              "architect",
+              "planner",
+              "implementer",
+              "debugger",
+              "tester",
+              "reviewer",
+            ])
+            .default("debugger"),
+          escalate: z
+            .enum([
+              "architect",
+              "planner",
+              "implementer",
+              "debugger",
+              "tester",
+              "reviewer",
+            ])
+            .default("debugger"),
+        })
+        .default({}),
+    })
+    .default({}),
   verification: z
     .object({
       typecheck: z.boolean().default(true),
@@ -272,6 +312,14 @@ export function defaultConfigJson(): string {
       },
       scheduler: {
         maxParallelWorkers: 2,
+      },
+      agents: {
+        enabled: true,
+        phaseRoles: {
+          implement: "implementer",
+          repair: "debugger",
+          escalate: "debugger",
+        },
       },
       verification: {
         typecheck: true,

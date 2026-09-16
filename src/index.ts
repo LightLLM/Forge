@@ -54,6 +54,13 @@ export {
   loadSpec,
 } from "./scheduler/index.js";
 export { createDirectiveExecutor } from "./scheduler/executors.js";
+export {
+  selectAgentRole,
+  listAgentRoles,
+  getAgentRole,
+  filterToolsForRole,
+  BUILTIN_ROLES,
+} from "./agents/index.js";
 export { BudgetTracker } from "./core/budgets/tracker.js";
 export {
   assertTransition,

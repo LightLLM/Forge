@@ -12,7 +12,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M3 | MCP Gateway | [✓] | 2026-09-16 |
 | M4 | Worktrees | [✓] | 2026-09-16 |
 | M5 | Task DAG + Parallel Workers | [✓] | 2026-09-16 |
-| M6 | Specialized Agents | [ ] | |
+| M6 | Specialized Agents | [✓] | 2026-09-16 |
 | M7 | Browser QA | [ ] | |
 | M8 | Persistent Daemon | [ ] | |
 | M9 | Background Jobs | [ ] | |
@@ -84,6 +84,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** no LLM planner yet; graph executor for CLI is directive-based (agent-backed node execution deferred)
 - **Completion date:** 2026-09-16
 
+## M6 — Specialized Agents
+
+- **Status:** complete
+- **Scope:** architect/planner/implementer/debugger/tester/reviewer roles; phase selection; tool/permission filtering; context injection; CLI
+- **Tests:** existing suite + `tests/m6-roles.test.ts`
+- **E2E evidence:** reviewer denied write_file; implementer allowed; role prompts and context budgets differ; tool allowlists diverge
+- **Limitations:** model preference is advisory under routing mode; full multi-role pipelines not yet a single CLI command
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M6 — Specialized Agents** (architect, planner, implementer, debugger, tester, reviewer)
+**M7 — Browser QA** (Playwright verification)

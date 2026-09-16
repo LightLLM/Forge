@@ -40,6 +40,9 @@ export interface AgentLoopOptions {
   previousApproach?: string | null;
   relatedMemoriesText?: string | null;
   relatedSkillsText?: string | null;
+  roleId?: string | null;
+  roleInstructions?: string | null;
+  permissionsSummary?: string;
   maxContextChars: number;
   commandTimeoutMs: number;
   maxCommandOutputChars: number;
@@ -104,9 +107,12 @@ export class AgentLoop {
       previousApproach: options.previousApproach,
       relatedMemoriesText: options.relatedMemoriesText,
       relatedSkillsText: options.relatedSkillsText,
+      roleId: options.roleId,
+      roleInstructions: options.roleInstructions,
       diffSummary,
       budgetSummary: formatBudget(budgets),
       permissionsSummary:
+        options.permissionsSummary ??
         "read/write/execute tools allowed within workspace; network tools denied; secrets paths denied",
       maxContextChars: options.maxContextChars,
     });

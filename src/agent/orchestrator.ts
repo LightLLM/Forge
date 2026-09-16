@@ -41,6 +41,10 @@ import {
   SkillRouter,
 } from "../skills/index.js";
 import { McpGateway } from "../mcp/index.js";
+import {
+  filterToolsForRole,
+  selectAgentRole,
+} from "../agents/index.js";
 
 export interface OrchestratorDeps {
   store: PersistenceStore;
@@ -649,6 +653,53 @@ export class TaskOrchestrator {
       }
     }
 
+    const role = config.agents.enabled
+      ? selectAgentRole({
+          phase: args.phase,
+          objective: args.task.objective,
+          phaseRoles: config.agents.phaseRoles,
+        })
+      : selectAgentRole({
+          phase: "implement",
+          objective: args.task.objective,
+          roleId: "implementer",
+        });
+
+    const roleTools = config.agents.enabled
+      ? filterToolsForRole(this.tools, role)
+      : this.tools;
+
+    const rolePolicy = new DefaultPolicyEngine({
+      allowWrites: role.permissions.allowWrites,
+      allowExecute: role.permissions.allowExecute,
+      approvals: {
+        mode: config.approvals.mode,
+        risks: config.approvals.risks,
+      },
+    });
+
+    const permissionsSummary = [
+      `role=${role.id}`,
+      `writes=${role.permissions.allowWrites ? "allowed" : "denied"}`,
+      `execute=${role.permissions.allowExecute ? "allowed" : "denied"}`,
+      `maxRisk=${role.permissions.maxRisk}`,
+      "network=denied",
+      "secrets paths=denied",
+    ].join("; ");
+
+    store.appendEvent(args.task.id, "role_selected", {
+      roleId: role.id,
+      phase: args.phase,
+      allowedTools: role.allowedTools,
+      permissions: role.permissions,
+      modelPolicy: role.modelPolicy,
+    });
+
+    const maxContextChars = Math.min(
+      config.limits.maxContextChars,
+      role.budgets.maxContextChars ?? config.limits.maxContextChars,
+    );
+
     const result = await this.agentLoop.run({
       task: args.task,
       runId: run.id,
@@ -656,9 +707,11 @@ export class TaskOrchestrator {
       providerKind: decision.providerKind,
       model: decision.model,
       workspace: args.workspace,
-      tools: this.tools,
-      policy: args.policy,
-      approvalGate: args.approvalGate,
+      tools: roleTools,
+      policy: rolePolicy,
+      approvalGate: role.permissions.allowWrites || role.permissions.allowExecute
+        ? args.approvalGate
+        : undefined,
       store,
       logger,
       budgets: args.budgets,
@@ -668,7 +721,10 @@ export class TaskOrchestrator {
       previousApproach: args.previousApproach,
       relatedMemoriesText: relatedMemoriesText || null,
       relatedSkillsText,
-      maxContextChars: config.limits.maxContextChars,
+      roleId: role.id,
+      roleInstructions: role.systemInstructions,
+      permissionsSummary,
+      maxContextChars,
       commandTimeoutMs: config.limits.commandTimeoutMs,
       maxCommandOutputChars: config.limits.maxCommandOutputChars,
       commandAllowlist: allowlist,

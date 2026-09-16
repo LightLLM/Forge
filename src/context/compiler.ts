@@ -33,6 +33,9 @@ export interface ContextCompilerInput {
   relatedMemoriesText?: string | null;
   /** Selected skills guidance (cannot grant permissions). */
   relatedSkillsText?: string | null;
+  /** Active specialized agent role instructions. */
+  roleId?: string | null;
+  roleInstructions?: string | null;
 }
 
 const FORGE_SECURITY_RULES = `You are a coding agent operating inside Forge.
@@ -78,6 +81,10 @@ export class ContextCompiler {
     const systemPrompt = [
       FORGE_SECURITY_RULES,
       "",
+      input.roleId
+        ? `## Active role\n${input.roleId}${input.roleInstructions ? `\n${input.roleInstructions}` : ""}`
+        : null,
+      "",
       "## Permissions",
       input.permissionsSummary,
       "",
@@ -86,7 +93,9 @@ export class ContextCompiler {
       "",
       "## Available tools",
       JSON.stringify(toolDefs, null, 2),
-    ].join("\n");
+    ]
+      .filter((p) => p != null && p !== "")
+      .join("\n");
 
     const parts: string[] = [];
     parts.push(`## Objective\n${input.task.objective}`);
@@ -167,6 +176,7 @@ export class ContextCompiler {
         fileCount: relevantFiles.length,
         failureLinkedFiles: closurePaths,
         phase: input.phase,
+        roleId: input.roleId ?? null,
       },
     };
   }

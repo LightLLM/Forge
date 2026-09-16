@@ -34,6 +34,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/tools` | Typed tools (Zod) + allowlisted commands |
 | `src/workspace` | Path sandbox + git worktrees/leases |
 | `src/agent` | Bounded loop + orchestrator |
+| `src/agents` | Specialized role definitions + selection |
 | `src/scheduler` | Task DAG + parallel worker scheduler |
 | `src/verification` | Independent checks |
 | `src/telemetry` | Structured logs with secret redaction |
