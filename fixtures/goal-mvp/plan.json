@@ -1,0 +1,21 @@
+{
+  "id": "goal-mvp",
+  "objective": "Build the MVP described in SPEC.md",
+  "nodes": [
+    {
+      "id": "alpha",
+      "objective": "write:src/alpha.ts:export const ALPHA = \"alpha\";\n",
+      "dependsOn": []
+    },
+    {
+      "id": "beta",
+      "objective": "write:src/beta.ts:export const BETA = \"beta\";\n",
+      "dependsOn": []
+    },
+    {
+      "id": "combine",
+      "objective": "write:src/index.ts:export { ALPHA } from \"./alpha.js\";\nexport { BETA } from \"./beta.js\";\n",
+      "dependsOn": ["alpha", "beta"]
+    }
+  ]
+}

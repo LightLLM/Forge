@@ -40,6 +40,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/daemon` | Persistent job queue, workers, crash recovery |
 | `src/jobs` | Scheduled engineering analyses + schedule store |
 | `src/execution` | Local / Docker / remote ExecutionBackend |
+| `src/goal` | Durable multi-task goals + resumable pipeline |
 | `src/telemetry` | Structured logs with secret redaction |
 
 ## Persistence

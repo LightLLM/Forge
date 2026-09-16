@@ -107,7 +107,7 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge jobs catalog|run|schedule|schedules|…`
 - Fixture: `fixtures/scheduled-repo`
 
-## v0.13 / M10 (this release)
+## v0.13 / M10 (shipped)
 
 **Execution backends**
 
@@ -117,8 +117,18 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge exec backends|run`
 - Config: `execution.backend`, `execution.remote`
 
+## v0.14 / M11 (this release)
+
+**Goal mode**
+
+- Durable goals (`goals` table) with phased pipeline
+- Architect → plan → execute → integrate → verify → review
+- Resumable task DAG via graph snapshots
+- CLI: `forge goal "<objective>"`, `forge goal resume|status|list`
+- Fixture: `fixtures/goal-mvp`
+
 ## Later
 
-- M11 goal mode (see milestones)
+- M12 model evaluation (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

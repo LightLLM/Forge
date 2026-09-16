@@ -17,7 +17,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M8 | Persistent Daemon | [✓] | 2026-09-16 |
 | M9 | Background Jobs | [✓] | 2026-09-16 |
 | M10 | Remote Execution | [✓] | 2026-09-16 |
-| M11 | Goal Mode | [ ] | |
+| M11 | Goal Mode | [✓] | 2026-09-16 |
 | M12 | Model Evaluation | [ ] | |
 | M13 | Adaptive Router | [ ] | |
 | M14 | Failure Intelligence | [ ] | |
@@ -129,6 +129,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** remote provider not connected; legacy `commands.sandbox` still the primary config knob for agent runs
 - **Completion date:** 2026-09-16
 
+## M11 — Goal Mode
+
+- **Status:** complete
+- **Scope:** GoalStore, GoalEngine phased pipeline, resumable DAG execution, CLI `forge goal`
+- **Tests:** existing suite + `tests/m11-goal.test.ts`
+- **E2E evidence:** goal-mvp fixture decomposes to 3 tasks and completes; partial graph snapshot resumes after restart
+- **Limitations:** planner/architect phases are deterministic; nodes use directive executor not full agent loop
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M11 — Goal Mode** (`forge goal`)
+**M12 — Model Evaluation** (`forge eval`)

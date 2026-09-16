@@ -146,6 +146,23 @@ CREATE TABLE IF NOT EXISTS daemon_schedules (
 );
 CREATE INDEX IF NOT EXISTS idx_daemon_schedules_next ON daemon_schedules(next_run_at);
 CREATE INDEX IF NOT EXISTS idx_daemon_schedules_status ON daemon_schedules(status);
+CREATE TABLE IF NOT EXISTS goals (
+  id TEXT PRIMARY KEY,
+  objective TEXT NOT NULL,
+  workspace_path TEXT NOT NULL,
+  phase TEXT NOT NULL,
+  plan_json TEXT,
+  graph_id TEXT,
+  graph_snapshot TEXT,
+  verification_json TEXT,
+  review_summary TEXT,
+  error TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  completed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_goals_phase ON goals(phase);
+CREATE INDEX IF NOT EXISTS idx_goals_workspace ON goals(workspace_path);
 `;
 
 function nowIso(): string {

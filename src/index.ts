@@ -116,6 +116,14 @@ export type {
   ScheduleRecord,
   CreateScheduleInput,
 } from "./jobs/index.js";
+export {
+  GoalEngine,
+  GoalStore,
+  resolveGoalPlan,
+  readGoalSpec,
+  isTerminalGoalPhase,
+} from "./goal/index.js";
+export type { GoalRecord, GoalPhase, GoalRunResult } from "./goal/index.js";
 export { BudgetTracker } from "./core/budgets/tracker.js";
 export {
   assertTransition,

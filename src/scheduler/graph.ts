@@ -119,6 +119,21 @@ export class TaskGraph {
     return this.list().map((n) => ({ ...n, dependsOn: [...n.dependsOn] }));
   }
 
+  /** Restore persisted node states (for goal resume). */
+  restoreSnapshot(snapshot: TaskNodeState[]): void {
+    for (const s of snapshot) {
+      const n = this.nodes.get(s.id);
+      if (!n) continue;
+      n.status = s.status;
+      n.summary = s.summary;
+      n.error = s.error;
+      n.startedAt = s.startedAt;
+      n.finishedAt = s.finishedAt;
+      n.workspacePath = s.workspacePath;
+    }
+    this.refreshReady();
+  }
+
   private require(id: string): TaskNodeState {
     const n = this.nodes.get(id);
     if (!n) throw new ForgeError(`Unknown node: ${id}`, "GRAPH_UNKNOWN_NODE");

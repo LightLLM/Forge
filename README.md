@@ -254,6 +254,10 @@ Model self-reports are never treated as success.
 | `forge jobs schedules` | List schedules |
 | `forge exec backends` | List local/docker/remote backend availability |
 | `forge exec run "<cmd>"` | Run a command via ExecutionBackend |
+| `forge goal "<objective>"` | Run a persistent multi-task goal |
+| `forge goal resume <id>` | Resume goal after restart |
+| `forge goal status [id]` | Show goal phase and task progress |
+| `forge goal list` | List persisted goals |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -273,9 +277,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends (local/docker/remote adapter), and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends, goal mode resumable DAGs, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.13)
+## Limitations (v0.14)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -284,6 +288,7 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - MCP is stdio-only with explicit allowlists; outputs are untrusted DATA
 - Worktrees are opt-in (`git.useWorktrees`); no automatic merge yet
 - Task graphs use deterministic decomposition / plan JSON; CLI graph run uses directive executor (not full agent loop per node yet)
+- Goal mode uses deterministic planning and directive node executor (not full agent loop per task yet)
 - Specialized roles filter tools/permissions per phase; multi-role pipelines are not yet one command
 - Browser QA uses stub driver by default; Playwright is optional when installed
 - Daemon job kinds include lightweight builtins + `analysis`; `agent_task` not wired to orchestrator yet
