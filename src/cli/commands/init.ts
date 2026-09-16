@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync, existsSync, copyFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 import { defaultConfigJson } from "../../config/load.js";
 
@@ -50,10 +51,12 @@ FORGE_TIMEOUT_MINUTES=30
 }
 
 function findEnvExample(): string | null {
-  // When running from the Forge package itself
+  // fileURLToPath is required on Windows (URL.pathname is not a valid fs path).
+  // init.js lives at dist/cli/commands/ → four levels up is package root.
+  const packageRoot = fileURLToPath(new URL("../../../..", import.meta.url));
   const candidates = [
     join(resolve(process.cwd()), ".env.example"),
-    join(new URL("../../../..", import.meta.url).pathname, ".env.example"),
+    join(packageRoot, ".env.example"),
   ];
   for (const c of candidates) {
     try {

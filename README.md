@@ -51,30 +51,75 @@ See [docs/security.md](docs/security.md).
 
 ## Requirements
 
-- Node.js 22+
-- pnpm
+- **Node.js 22+** (Windows, macOS, or Linux)
 - Git
-- Ollama (for local inference)
-- Optional: OpenRouter API key (for cloud escalation)
-- Optional: Docker (for `commands.sandbox` = `auto` | `docker`)
+- pnpm (recommended) or npm
+- Ollama (recommended for local inference)
+- Optional: OpenRouter API key (cloud escalation)
+- Optional: Docker (`commands.sandbox` = `auto` | `docker`)
 
 ## Installation
 
+**Full guide (Windows / macOS / Linux):** [docs/INSTALL.md](docs/INSTALL.md)
+
+### Quick install (clone + global link)
+
+```bash
+git clone https://github.com/LightLLM/Forge.git
+cd Forge
+```
+
+**macOS / Linux:**
+
+```bash
+chmod +x scripts/install.sh
+./scripts/install.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+.\scripts\install.ps1
+```
+
+**Manual (all platforms):**
+
+```bash
+pnpm install   # or: npm install
+pnpm build     # or: npm run build
+npm install -g . --force
+forge-harness --version
+forge-harness doctor
+```
+
+`--force` is only needed if another tool already owns the `forge` name on your PATH; **`forge-harness` is the recommended command**.
+
+### Install from GitHub without cloning
+
+```bash
+npm install -g github:LightLLM/Forge
+# if `forge` conflicts with another tool:
+# npm install -g github:LightLLM/Forge --force
+```
+
+### Develop inside the repo
+
 ```bash
 pnpm install
-pnpm build
 pnpm forge -- doctor
 ```
 
-From this repository, prefer:
+> **Name collision:** Atlassian’s `@forge/cli` and Ethereum Foundry also ship a `forge` binary. This package exposes **`forge-harness`** as the unambiguous command. If `forge` on your PATH is another tool, use `forge-harness` or `pnpm forge` (in this repo).
+
+### First project
 
 ```bash
-pnpm forge -- <command>
+cd your-project
+forge-harness init
+# copy .env.example → .env and set OLLAMA_MODEL
+forge-harness doctor
+forge-harness run "Fix the failing signup tests" --mode local-preferred
 ```
-
-After `pnpm build`, you can also run `node dist/cli/index.js`.
-
-> **Name collision:** Atlassian’s `@forge/cli` and Ethereum Foundry also ship a `forge` binary. This package also exposes `forge-harness` as an unambiguous alias. If `forge` on your PATH is another tool, use `pnpm forge` (in this repo) or `forge-harness` after linking this package.
 
 ## Ollama setup
 
@@ -104,13 +149,15 @@ Forge works in local-only mode without an OpenRouter key.
 
 ```bash
 cd your-project
-forge init
-forge doctor
-forge models
-forge run "Fix the failing signup tests" --mode local-preferred
-forge status <task-id>
-forge inspect <task-id>
+forge-harness init
+forge-harness doctor
+forge-harness models
+forge-harness run "Fix the failing signup tests" --mode local-preferred
+forge-harness status <task-id>
+forge-harness inspect <task-id>
 ```
+
+See [docs/INSTALL.md](docs/INSTALL.md) for platform-specific setup and troubleshooting.
 
 ### Routing modes
 

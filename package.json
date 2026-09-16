@@ -11,6 +11,15 @@
   "exports": {
     ".": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "skills",
+    ".env.example",
+    "README.md",
+    "LICENSE",
+    "docs/INSTALL.md",
+    "AGENTS.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -20,19 +29,35 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "tsx src/cli/index.ts",
-    "forge": "tsx src/cli/index.ts"
+    "forge": "tsx src/cli/index.ts",
+    "prepare": "npm run build",
+    "prepack": "npm run build"
   },
   "engines": {
     "node": ">=22"
   },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
   "keywords": [
     "forge",
     "agent",
     "coding",
     "ollama",
-    "openrouter"
+    "openrouter",
+    "local-first"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LightLLM/Forge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LightLLM/Forge/issues"
+  },
+  "homepage": "https://github.com/LightLLM/Forge#readme",
   "dependencies": {
     "commander": "^13.1.0",
     "postgres": "^3.4.9",
