@@ -39,6 +39,7 @@ export interface AgentLoopOptions {
   verification?: VerificationResult | null;
   previousApproach?: string | null;
   relatedMemoriesText?: string | null;
+  relatedSkillsText?: string | null;
   maxContextChars: number;
   commandTimeoutMs: number;
   maxCommandOutputChars: number;
@@ -102,6 +103,7 @@ export class AgentLoop {
       verification: options.verification,
       previousApproach: options.previousApproach,
       relatedMemoriesText: options.relatedMemoriesText,
+      relatedSkillsText: options.relatedSkillsText,
       diffSummary,
       budgetSummary: formatBudget(budgets),
       permissionsSummary:

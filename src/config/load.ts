@@ -81,6 +81,20 @@ export const ForgeConfigSchema = z.object({
       packs: z.array(z.string()).default(["repository"]),
     })
     .default({}),
+  skills: z
+    .object({
+      /** Load and inject relevant skills into worker context. */
+      enabled: z.boolean().default(true),
+      /** Max skills injected per phase. */
+      maxSkills: z.number().int().positive().default(4),
+      /** Extra directories containing skill folders. */
+      extraPaths: z.array(z.string()).default([]),
+      /** Always include these skill ids when present. */
+      include: z.array(z.string()).default([]),
+      /** Never include these skill ids. */
+      exclude: z.array(z.string()).default([]),
+    })
+    .default({}),
   databaseUrl: z.string().optional(),
   ui: z
     .object({
@@ -243,6 +257,10 @@ export function defaultConfigJson(): string {
       },
       tools: {
         packs: ["repository"],
+      },
+      skills: {
+        enabled: true,
+        maxSkills: 4,
       },
       ui: {
         streamProgress: true,

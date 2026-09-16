@@ -216,6 +216,9 @@ Model self-reports are never treated as success.
 | `forge memory inspect <id>` | Show one memory |
 | `forge memory prune` | Retention prune (`--keep-latest` / `--older-than-days`) |
 | `forge memory write` | Manually write project/decision memory |
+| `forge skills list` | List built-in + workspace skills |
+| `forge skills inspect <id>` | Show skill metadata and body |
+| `forge skills match "<objective>"` | Preview skill selection |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -235,13 +238,14 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.4)
+## Limitations (v0.5)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
 - Memory retrieval is keyword-based (no vector DB yet)
+- Skills are guidance only (no skill-declared tools/permissions); selection is keyword/signal based
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure

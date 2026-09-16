@@ -1,0 +1,8 @@
+{
+  "id": "security-review",
+  "name": "Security review",
+  "description": "Security-sensitive change review: auth, secrets, validation, dangerous commands.",
+  "version": "1.0.0",
+  "tags": ["security", "auth", "secrets"],
+  "triggers": ["security", "auth", "authentication", "authorization", "secret", "credential", "password", "token", "injection"]
+}

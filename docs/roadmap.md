@@ -20,7 +20,7 @@ Approval gates, hardened Docker profiles, better relevance
 2. **Plugin tool packs** — `tools.packs` loads built-in + external modules (still policy-gated)
 3. **PostgreSQL store module** — `PostgresStore` + schema; CLI still defaults to SQLite sync I/O
 
-## v0.4 / M1 (this release)
+## v0.4 / M1 (shipped)
 
 **Persistent engineering memory**
 
@@ -30,8 +30,17 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge memory list|search|inspect|prune|write`
 - Tracker: [MILESTONES.md](MILESTONES.md)
 
+## v0.5 / M2 (this release)
+
+**Skills system**
+
+- Built-in + workspace skills (`skill.json` + `SKILL.md`)
+- Validator blocks privilege escalation via skill metadata
+- Router loads only relevant skills into worker context
+- CLI: `forge skills list|inspect|match`
+
 ## Later
 
-- M2 Skills, M3 MCP, worktrees, task DAG, daemon, goal mode (see milestones)
+- M3 MCP, worktrees, task DAG, daemon, goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

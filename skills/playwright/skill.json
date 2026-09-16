@@ -1,0 +1,8 @@
+{
+  "id": "playwright",
+  "name": "Playwright",
+  "description": "Browser E2E with Playwright: navigation, forms, assertions.",
+  "version": "1.0.0",
+  "tags": ["playwright", "browser", "e2e"],
+  "triggers": ["playwright", "browser", "e2e", "ui", "login", "screenshot"]
+}

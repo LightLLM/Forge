@@ -16,6 +16,15 @@ export { loadToolPacks } from "./tools/packs.js";
 export { openStore } from "./persistence/factory.js";
 export { PostgresStore, POSTGRES_SCHEMA_SQL } from "./persistence/postgres.js";
 export { MemoryService, formatMemoriesForContext } from "./memory/service.js";
+export {
+  SkillLoader,
+  SkillRegistry,
+  SkillRouter,
+  SkillValidator,
+  formatSkillsForContext,
+  collectWorkspaceSignals,
+  FORBIDDEN_SKILL_KEYS,
+} from "./skills/index.js";
 export { buildDockerRunArgs } from "./tools/sandbox.js";
 export { rankRelevantFiles } from "./context/relevance.js";
 export { hasPlaywright, VerificationEngine } from "./verification/engine.js";

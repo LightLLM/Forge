@@ -1,0 +1,8 @@
+{
+  "id": "typescript",
+  "name": "TypeScript",
+  "description": "Type-safe TypeScript changes and typecheck failures.",
+  "version": "1.0.0",
+  "tags": ["typescript", "tsc", "types"],
+  "triggers": ["typescript", "typecheck", "tsc", "type", "types", ".ts", ".tsx"]
+}

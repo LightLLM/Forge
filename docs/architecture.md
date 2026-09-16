@@ -26,6 +26,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/core` | Domain types, state machine, budgets |
 | `src/persistence` | `PersistenceStore` interface + SQLite impl |
 | `src/memory` | Sessions + durable engineering memory |
+| `src/skills` | Skill load/validate/route into context |
 | `src/models` | Provider-neutral inference + deterministic router |
 | `src/context` | Context compiler (not full-repo dumps) |
 | `src/policy` | Authorization decisions |

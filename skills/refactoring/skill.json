@@ -1,0 +1,8 @@
+{
+  "id": "refactoring",
+  "name": "Refactoring",
+  "description": "Safe structural refactors with verification after each step.",
+  "version": "1.0.0",
+  "tags": ["refactor", "refactoring", "cleanup"],
+  "triggers": ["refactor", "refactoring", "rename", "extract", "cleanup", "restructure"]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "documentation",
+  "name": "Documentation",
+  "description": "README and docs updates that match actual behavior.",
+  "version": "1.0.0",
+  "tags": ["docs", "documentation", "readme"],
+  "triggers": ["docs", "documentation", "readme", "changelog", "guide"]
+}

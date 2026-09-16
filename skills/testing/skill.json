@@ -1,0 +1,8 @@
+{
+  "id": "testing",
+  "name": "Testing",
+  "description": "Writing and repairing unit/integration tests.",
+  "version": "1.0.0",
+  "tags": ["testing", "test", "vitest", "jest"],
+  "triggers": ["test", "tests", "testing", "vitest", "jest", "coverage", "spec"]
+}

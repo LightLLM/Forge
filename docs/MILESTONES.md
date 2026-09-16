@@ -8,7 +8,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 |----|-----------|--------|------------|
 | M0 | Baseline (v0 verify + docs) | [✓] | 2026-09-16 |
 | M1 | Persistent Engineering Memory | [✓] | 2026-09-16 |
-| M2 | Skills | [ ] | |
+| M2 | Skills | [✓] | 2026-09-16 |
 | M3 | MCP Gateway | [ ] | |
 | M4 | Worktrees | [ ] | |
 | M5 | Task DAG + Parallel Workers | [ ] | |
@@ -48,6 +48,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** Keyword retrieval only (no embeddings/FTS); Postgres schema includes tables but agent loop remains SQLite; no MemoryCompactor LLM summarization yet (prune is retention-based)
 - **Completion date:** 2026-09-16
 
+## M2 — Skills
+
+- **Status:** complete
+- **Scope:** SkillRegistry/Loader/Router/Validator; built-in skills; relevant-only context injection; `forge skills` CLI
+- **Tests:** existing suite + `tests/m2-skills.test.ts`
+- **E2E evidence:** “Implement authentication” selects security-review (+ typescript via signals) and excludes playwright/documentation; privilege-seeking skill.json rejected
+- **Limitations:** Keyword/signal routing only; skill scripts not executed; subset of planned skill catalog shipped as built-ins
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M2 — Skills** (`SkillRegistry`, `SkillLoader`, `SkillRouter`, skill CLI, relevant-only loading)
+**M3 — MCP Gateway** (MCP client, server registry, policy wrapping, audit, CLI)

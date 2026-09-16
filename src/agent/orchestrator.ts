@@ -31,6 +31,13 @@ import {
   formatMemoriesForContext,
   MemoryService,
 } from "../memory/service.js";
+import {
+  collectWorkspaceSignals,
+  formatSkillsForContext,
+  SkillLoader,
+  SkillRegistry,
+  SkillRouter,
+} from "../skills/index.js";
 
 export interface OrchestratorDeps {
   store: PersistenceStore;
@@ -527,6 +534,34 @@ export class TaskOrchestrator {
       });
     }
 
+    let relatedSkillsText: string | null = null;
+    if (config.skills.enabled) {
+      const loaded = new SkillLoader().load(args.workspace.root, {
+        extraPaths: config.skills.extraPaths,
+      });
+      const registry = new SkillRegistry(loaded);
+      const router = new SkillRouter(registry);
+      const matches = router.route({
+        objective: args.task.objective,
+        phase: args.phase,
+        signals: collectWorkspaceSignals(args.workspace.root),
+        maxSkills: config.skills.maxSkills,
+        include: config.skills.include,
+        exclude: config.skills.exclude,
+      });
+      relatedSkillsText = formatSkillsForContext(matches) || null;
+      if (matches.length > 0) {
+        store.appendEvent(args.task.id, "skills_selected", {
+          phase: args.phase,
+          skills: matches.map((m) => ({
+            id: m.skill.metadata.id,
+            score: m.score,
+            reasons: m.reasons,
+          })),
+        });
+      }
+    }
+
     const result = await this.agentLoop.run({
       task: args.task,
       runId: run.id,
@@ -545,6 +580,7 @@ export class TaskOrchestrator {
       verification: args.verification,
       previousApproach: args.previousApproach,
       relatedMemoriesText: relatedMemoriesText || null,
+      relatedSkillsText,
       maxContextChars: config.limits.maxContextChars,
       commandTimeoutMs: config.limits.commandTimeoutMs,
       maxCommandOutputChars: config.limits.maxCommandOutputChars,

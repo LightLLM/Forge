@@ -1,0 +1,8 @@
+{
+  "id": "debugging",
+  "name": "Debugging",
+  "description": "Systematic debugging of failing verification and runtime errors.",
+  "version": "1.0.0",
+  "tags": ["debug", "debugging", "error", "failure"],
+  "triggers": ["debug", "debugging", "fix", "bug", "error", "failing", "failure", "stack", "trace"]
+}
