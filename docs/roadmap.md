@@ -39,7 +39,7 @@ Approval gates, hardened Docker profiles, better relevance
 - Router loads only relevant skills into worker context
 - CLI: `forge skills list|inspect|match`
 
-## v0.6 / M3 (this release)
+## v0.6 / M3 (shipped)
 
 **MCP gateway**
 
@@ -49,8 +49,17 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge mcp list|inspect|test|enable|disable`
 - Fixture: `fixtures/mcp-echo-server`
 
+## v0.7 / M4 (this release)
+
+**Git worktrees**
+
+- `WorktreeManager` + workspace leases + conflict detection
+- `git.useWorktrees` isolates tasks under `.forge/worktrees`
+- CLI: `forge worktrees list|cleanup|leases|conflicts`
+- Dirty worktrees never force-deleted by default
+
 ## Later
 
-- M4 worktrees, task DAG, daemon, goal mode (see milestones)
+- M5 task DAG + parallel workers, daemon, goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

@@ -26,6 +26,8 @@ import type { Logger } from "../telemetry/logger.js";
 import { VerificationEngine } from "../verification/engine.js";
 import { Workspace } from "../workspace/workspace.js";
 import { createTaskBranch } from "../workspace/git.js";
+import { WorktreeManager } from "../workspace/worktree.js";
+import { WorkspaceLease, type LeaseHandle } from "../workspace/lease.js";
 import type { SandboxOptions } from "../tools/sandbox.js";
 import {
   formatMemoriesForContext,
@@ -81,7 +83,7 @@ export class TaskOrchestrator {
   async run(options: RunTaskOptions): Promise<TaskReport> {
     const { store, config, logger } = this.deps;
     const workspacePath = options.workspacePath ?? config.workspacePath;
-    const workspace = new Workspace(workspacePath);
+    let workspace = new Workspace(workspacePath);
 
     this.tools = await loadToolPacks(workspacePath, config.tools.packs);
 
@@ -139,8 +141,40 @@ export class TaskOrchestrator {
 
     let recordedFailureId: string | null = null;
     let sawVerificationFailure = false;
+    let lease: LeaseHandle | null = null;
 
-    if (config.git.createTaskBranch) {
+    if (config.git.useWorktrees) {
+      const manager = new WorktreeManager(workspacePath, {
+        worktreeBase: config.git.worktreeBase,
+      });
+      const wt = await manager.createForTask(task.id);
+      workspace = wt.workspace;
+      store.appendEvent(task.id, "worktree_created", {
+        path: wt.path,
+        branch: wt.branch,
+        created: wt.created,
+        detail: wt.detail,
+      });
+      store.createArtifact(
+        task.id,
+        "worktree",
+        JSON.stringify(
+          {
+            path: wt.path,
+            branch: wt.branch,
+            created: wt.created,
+            detail: wt.detail,
+          },
+          null,
+          2,
+        ),
+      );
+      logger.info("worktree ready", {
+        path: wt.path,
+        branch: wt.branch,
+        created: wt.created,
+      });
+    } else if (config.git.createTaskBranch) {
       const branchResult = await createTaskBranch(workspace, task.id);
       store.appendEvent(task.id, "task_branch", branchResult);
       store.createArtifact(
@@ -149,6 +183,15 @@ export class TaskOrchestrator {
         JSON.stringify(branchResult, null, 2),
       );
       logger.info("task branch", branchResult);
+    }
+
+    if (config.git.acquireLease || config.git.useWorktrees) {
+      lease = WorkspaceLease.acquire(workspace.root, task.id, task.timeoutMs);
+      store.appendEvent(task.id, "workspace_lease_acquired", {
+        path: workspace.root,
+        holderId: task.id,
+        expiresAt: lease.record.expiresAt,
+      });
     }
 
     const budgets = new BudgetTracker({
@@ -469,6 +512,17 @@ export class TaskOrchestrator {
 
     if (mcpGateway) {
       await mcpGateway.close().catch(() => undefined);
+    }
+
+    if (lease) {
+      try {
+        lease.release();
+        store.appendEvent(finalTask.id, "workspace_lease_released", {
+          path: workspace.root,
+        });
+      } catch {
+        // ignore
+      }
     }
 
     store.appendEvent(task.id, "task_finished", {

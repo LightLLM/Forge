@@ -45,7 +45,7 @@ export async function createTaskBranch(
   };
 }
 
-function runGit(
+export function runGit(
   cwd: string,
   args: string[],
 ): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {

@@ -10,13 +10,14 @@ import { registerApprovals } from "./commands/approvals.js";
 import { registerMemory } from "./commands/memory.js";
 import { registerSkills } from "./commands/skills.js";
 import { registerMcp } from "./commands/mcp.js";
+import { registerWorktrees } from "./commands/worktrees.js";
 
 const program = new Command();
 
 program
   .name("forge")
   .description("Local-first hybrid autonomous software-engineering harness")
-  .version("0.6.0");
+  .version("0.7.0");
 
 registerInit(program);
 registerDoctor(program);
@@ -28,6 +29,7 @@ registerApprovals(program);
 registerMemory(program);
 registerSkills(program);
 registerMcp(program);
+registerWorktrees(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);

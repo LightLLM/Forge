@@ -41,7 +41,11 @@ export {
   resolveCommandBackend,
   executeCommand,
 } from "./tools/sandbox.js";
-export { createTaskBranch, sanitizeTaskBranchName } from "./workspace/git.js";
+export { createTaskBranch, sanitizeTaskBranchName, runGit } from "./workspace/git.js";
+export { WorktreeManager } from "./workspace/worktree.js";
+export { WorkspaceLease } from "./workspace/lease.js";
+export { ConflictDetector } from "./workspace/conflict.js";
+export { IntegrationManager } from "./workspace/integration.js";
 export { BudgetTracker } from "./core/budgets/tracker.js";
 export {
   assertTransition,

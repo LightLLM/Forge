@@ -180,7 +180,9 @@ Priority: CLI flags > environment > `forge.config.json` > defaults.
 - `commands.sandbox`: `host` (default), `auto` (Docker when available), or `docker` (required)
 - `commands.dockerHardened`: drop capabilities, no-new-privileges, read-only rootfs + tmpfs (default `true`)
 - `verification.playwright`: run Playwright when detected (`auto`), force (`on`), or skip (`off`)
-- `git.createTaskBranch`: create `forge/<task-id>` before work
+- `git.createTaskBranch`: create `forge/<task-id>` before work (ignored when worktrees enabled)
+- `git.useWorktrees`: isolate each task in `.forge/worktrees` via `git worktree`
+- `git.acquireLease`: exclusive lease on the effective workspace path (auto-on with `useWorktrees`)
 - `approvals.mode`: `off` | `prompt` (TTY / `FORGE_AUTO_APPROVE=1`) | `queue` (detached: `forge approve` / `forge deny`) | `deny-high-risk`
 - `tools.packs`: built-in names (`repository`) and/or paths to modules exporting `createTools()`
 - `FORGE_DATABASE_URL`: optional PostgreSQL URL (schema ensure + `PostgresStore` API; CLI agent loop still uses SQLite)
@@ -223,6 +225,10 @@ Model self-reports are never treated as success.
 | `forge mcp inspect <id>` | Advertise tools from a server |
 | `forge mcp test <id> --tool <name>` | Call an allowlisted MCP tool |
 | `forge mcp enable/disable <id>` | Toggle server in forge.config.json |
+| `forge worktrees list` | List Forge-managed worktrees |
+| `forge worktrees cleanup` | Prune abandoned worktrees (skips dirty) |
+| `forge worktrees leases` | Show lease for current workspace |
+| `forge worktrees conflicts <a> <b>` | Overlapping changed paths |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -242,19 +248,20 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.6)
+## Limitations (v0.7)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
 - Memory retrieval is keyword-based (no vector DB yet)
 - Skills are guidance only (no skill-declared tools/permissions); selection is keyword/signal based
 - MCP is stdio-only with explicit allowlists; outputs are untrusted DATA
+- Worktrees are opt-in (`git.useWorktrees`); no automatic merge yet
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure
-- Conservative Git (no push/merge/force); optional task branches only
+- Conservative Git (no push/merge/force); optional task branches / worktrees only
 - Approval `prompt` needs a TTY; use `queue` + `forge approve` for detached runs
 - Tool packs cannot escalate privileges — PolicyEngine still decides
 - Tool-calling quality depends on the selected model

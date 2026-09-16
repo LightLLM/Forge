@@ -57,6 +57,12 @@ export const ForgeConfigSchema = z.object({
   git: z
     .object({
       createTaskBranch: z.boolean().default(false),
+      /** Isolate each task in a git worktree under .forge/worktrees. */
+      useWorktrees: z.boolean().default(false),
+      /** Relative path from repo root for Forge worktrees. */
+      worktreeBase: z.string().default(".forge/worktrees"),
+      /** Acquire exclusive lease on the effective workspace path (also implied by useWorktrees). */
+      acquireLease: z.boolean().default(false),
     })
     .default({}),
   approvals: z
@@ -276,6 +282,9 @@ export function defaultConfigJson(): string {
       },
       git: {
         createTaskBranch: false,
+        useWorktrees: false,
+        worktreeBase: ".forge/worktrees",
+        acquireLease: false,
       },
       approvals: {
         mode: "off",

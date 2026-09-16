@@ -32,7 +32,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/context` | Context compiler (not full-repo dumps) |
 | `src/policy` | Authorization decisions |
 | `src/tools` | Typed tools (Zod) + allowlisted commands |
-| `src/workspace` | Path sandbox |
+| `src/workspace` | Path sandbox + git worktrees/leases |
 | `src/agent` | Bounded loop + orchestrator |
 | `src/verification` | Independent checks |
 | `src/telemetry` | Structured logs with secret redaction |

@@ -10,7 +10,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M1 | Persistent Engineering Memory | [✓] | 2026-09-16 |
 | M2 | Skills | [✓] | 2026-09-16 |
 | M3 | MCP Gateway | [✓] | 2026-09-16 |
-| M4 | Worktrees | [ ] | |
+| M4 | Worktrees | [✓] | 2026-09-16 |
 | M5 | Task DAG + Parallel Workers | [ ] | |
 | M6 | Specialized Agents | [ ] | |
 | M7 | Browser QA | [ ] | |
@@ -66,6 +66,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** stdio only; no resources/prompts; no process pool across tasks
 - **Completion date:** 2026-09-16
 
+## M4 — Worktrees
+
+- **Status:** complete
+- **Scope:** WorktreeManager, WorkspaceLease, ConflictDetector, IntegrationManager; orchestrator wiring; CLI
+- **Tests:** existing suite + `tests/m4-worktrees.test.ts`
+- **E2E evidence:** two worktrees write independent files without touching primary repo or each other; same-path lease denied; dirty remove refused without force
+- **Limitations:** no auto-merge/PR; leases are file-based without daemon heartbeat yet
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M4 — Worktrees** (`WorktreeManager`, workspace leases, cleanup, conflict detection)
+**M5 — Task DAG + Parallel Workers** (decomposition, dependency graph, scheduler, parallel execution)
