@@ -1,6 +1,8 @@
 # Forge — Local-First Hybrid Autonomous Coding Harness
 
-Forge is a **local-first, cloud-escalating autonomous software-engineering runtime**.
+**Version:** `1.1.0-rc.1` · **Repo:** [LightLLM/Forge](https://github.com/LightLLM/Forge)
+
+Forge is a **local-first, cloud-escalating autonomous software-engineering runtime** with a **Web GUI**, **CLI**, and **messaging channels** (Telegram / Slack) that all share one control plane.
 
 You describe an objective. Forge understands the repository, builds context, routes to a model (preferring local Ollama), lets the model propose tool calls, authorizes and executes them under policy, verifies independently, repairs on failure, and optionally escalates to OpenRouter.
 
@@ -10,19 +12,46 @@ MODEL PROPOSES → FORGE AUTHORIZES → TOOL EXECUTES → TESTS VERIFY → FORGE
 
 Forge—not the model—owns state, permissions, budgets, routing, verification, audit history, escalation, and termination.
 
+## Interfaces (v1.1)
+
+```text
+ WEB GUI  ·  CLI  ·  Telegram  ·  Slack  ·  API
+                    │
+            INTERACTION GATEWAY  (127.0.0.1)
+                    │
+              Forge runtime
+         (tasks · memory · policy · verify)
+                    │
+              Ollama / OpenRouter
+```
+
+| Surface | How to start |
+|---------|----------------|
+| **Web GUI** | `forge-harness start` → open http://127.0.0.1:8787/ |
+| **CLI** | `forge-harness run "…"` |
+| **Telegram / Slack** | Set bot tokens, then `forge-harness gateway start` (pairing required) |
+
+Docs: [docs/gui-gateway.md](docs/gui-gateway.md) · [docs/INSTALL.md](docs/INSTALL.md)
+
 ## Why local-first
 
 - Keep source code on your machine by default
 - Use free/local models via Ollama when they are good enough
 - Escalate to cloud only when policy allows and local attempts fail
 - Never silently send a `local-only` task to the cloud
+- Web/gateway bind to **127.0.0.1** by default (not public)
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-  USER[User] --> CLI[Forge CLI]
+  USER[User] --> WEB[Web GUI]
+  USER --> CLI[Forge CLI]
+  USER --> TG[Telegram / Slack]
+  WEB --> GW[Interaction Gateway]
   CLI --> ORCH[Task Orchestrator]
+  TG --> GW
+  GW --> ORCH
   ORCH --> CTX[Context Compiler]
   ORCH --> ROUTER[Model Router]
   ROUTER --> OLLAMA[Ollama]
@@ -46,6 +75,7 @@ See [docs/architecture.md](docs/architecture.md) for details.
 - Command allowlist (no unconstrained shell)
 - Repository content is **untrusted DATA** — it cannot grant permissions, change routing, raise budgets, or disable verification
 - Secrets (`.env`, keys) are denied by policy and never logged
+- Messaging channels require **pairing**; chat cannot escalate `local-only` → cloud
 
 See [docs/security.md](docs/security.md).
 
@@ -57,6 +87,7 @@ See [docs/security.md](docs/security.md).
 - Ollama (recommended for local inference)
 - Optional: OpenRouter API key (cloud escalation)
 - Optional: Docker (`commands.sandbox` = `auto` | `docker`)
+- Optional: `TELEGRAM_BOT_TOKEN` / `SLACK_BOT_TOKEN` for messaging channels
 
 ## Installation
 
@@ -121,6 +152,22 @@ forge-harness doctor
 forge-harness run "Fix the failing signup tests" --mode local-preferred
 ```
 
+### Start the Web GUI (recommended)
+
+From your project (or the Forge repo):
+
+```bash
+forge-harness start --port 8787
+# → http://127.0.0.1:8787/
+```
+
+Or:
+
+```bash
+forge-harness gateway start --port 8787
+```
+
+In the GUI you can chat (ASK / PLAN / BUILD / DEBUG / REVIEW), watch live events, manage approvals and channel pairings, and inspect models/skills/memory — all against the **same** Forge runtime as the CLI.
 ## Ollama setup
 
 1. Install [Ollama](https://ollama.com)
@@ -343,9 +390,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends, goal mode, model evaluation, adaptive routing, failure corpus, knowledge graph, architecture guardian, restricted approvals, operator dashboard sync, skill improvement proposals, Forge v1 RC checklist, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends, goal mode, model evaluation, adaptive routing, failure corpus, knowledge graph, architecture guardian, restricted approvals, operator dashboard sync, skill improvement proposals, Forge v1 RC checklist, **Interaction Gateway API + SSE + fake-channel E2E**, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v1.0.0-rc.1)
+## Limitations (v1.1.0-rc.1)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -360,7 +407,9 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - Failure corpus uses keyword retrieval; not yet injected into repair prompts automatically
 - Knowledge graph is file-import based (symbols/routes/tables deferred)
 - Architecture guardian primarily enforces `no_import` layer rules
-- Operator dashboard is a minimal local HTTP UI
+- Web GUI is a localhost SPA served by the Gateway (not a separate Next.js app)
+- WhatsApp channel is a stub until official Cloud API is wired
+- Telegram/Slack need env tokens; unapproved users must pair in the GUI
 - Skill proposals do not auto-cluster from failures yet
 - Specialized roles filter tools/permissions per phase; multi-role pipelines are not yet one command
 - Browser QA uses stub driver by default; Playwright is optional when installed
