@@ -1,0 +1,36 @@
+{
+  "mode": "local-preferred",
+  "local": {
+    "provider": "ollama",
+    "model": ""
+  },
+  "cloud": {
+    "provider": "openrouter",
+    "model": ""
+  },
+  "limits": {
+    "maxTurns": 20,
+    "maxRepairs": 2,
+    "timeoutMinutes": 30,
+    "maxCloudCostUsd": 1
+  },
+  "verification": {
+    "typecheck": true,
+    "lint": true,
+    "test": true,
+    "build": false,
+    "gitDiffCheck": true,
+    "playwright": "auto"
+  },
+  "commands": {
+    "sandbox": "host",
+    "dockerImage": "node:22-bookworm-slim",
+    "dockerNetworkDisabled": true
+  },
+  "git": {
+    "createTaskBranch": false
+  },
+  "ui": {
+    "streamProgress": true
+  }
+}

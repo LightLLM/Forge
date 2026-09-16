@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.forge/
+.DS_Store
+*.log
+.turbo/
+.vscode/
+.idea/
+tmp/
+*.tgz
+pnpm-debug.log*
