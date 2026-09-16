@@ -182,7 +182,8 @@ Priority: CLI flags > environment > `forge.config.json` > defaults.
 
 - `commands.sandbox`: `host` (default), `auto` (Docker when available), or `docker` (required)
 - `execution.backend`: `auto` | `local` | `docker` | `remote` (shared ExecutionBackend; remote is an adapter stub)
-- `execution.remote.endpoint` / `tokenEnv`: optional remote worker configuration (no vendor SDK)
+- `routing.adaptive`: rank among policy-allowed model candidates using performance history
+- `routing.localCandidates` / `routing.cloudCandidates`: optional candidate lists for adaptive routing
 - `commands.dockerHardened`: drop capabilities, no-new-privileges, read-only rootfs + tmpfs (default `true`)
 - `verification.playwright`: run Playwright when detected (`auto`), force (`on`), or skip (`off`)
 - `verification.browserQa`: run Forge browser scenarios when present (`auto`), force (`on`), or skip (`off`)
@@ -258,6 +259,10 @@ Model self-reports are never treated as success.
 | `forge goal resume <id>` | Resume goal after restart |
 | `forge goal status [id]` | Show goal phase and task progress |
 | `forge goal list` | List persisted goals |
+| `forge eval run` | Run model evaluation dataset |
+| `forge eval models` | Show recent eval summaries |
+| `forge eval report [id]` | Detailed eval report JSON |
+| `forge failures search "<query>"` | Retrieve prior failure fixes |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -277,9 +282,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends, goal mode resumable DAGs, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, scheduled background analyses, execution backends, goal mode, model evaluation, adaptive routing, failure corpus retrieval, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.14)
+## Limitations (v0.17)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -289,6 +294,9 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - Worktrees are opt-in (`git.useWorktrees`); no automatic merge yet
 - Task graphs use deterministic decomposition / plan JSON; CLI graph run uses directive executor (not full agent loop per node yet)
 - Goal mode uses deterministic planning and directive node executor (not full agent loop per task yet)
+- Model eval uses fake profiles by default; live provider benchmarks are manual
+- Adaptive routing requires `routing.adaptive` and does not override `local-only` policy
+- Failure corpus uses keyword retrieval; not yet injected into repair prompts automatically
 - Specialized roles filter tools/permissions per phase; multi-role pipelines are not yet one command
 - Browser QA uses stub driver by default; Playwright is optional when installed
 - Daemon job kinds include lightweight builtins + `analysis`; `agent_task` not wired to orchestrator yet

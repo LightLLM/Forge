@@ -136,6 +136,14 @@ export const ForgeConfigSchema = z.object({
         .default({}),
     })
     .default({}),
+  routing: z
+    .object({
+      /** Use performance history to pick among policy-allowed model candidates. */
+      adaptive: z.boolean().default(false),
+      localCandidates: z.array(z.string()).optional(),
+      cloudCandidates: z.array(z.string()).optional(),
+    })
+    .default({}),
   git: z
     .object({
       createTaskBranch: z.boolean().default(false),
@@ -390,6 +398,9 @@ export function defaultConfigJson(): string {
         remote: {
           tokenEnv: "FORGE_REMOTE_EXEC_TOKEN",
         },
+      },
+      routing: {
+        adaptive: false,
       },
       git: {
         createTaskBranch: false,

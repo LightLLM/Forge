@@ -19,6 +19,10 @@ export interface RouterInput {
   escalationReason?: string;
   localAvailable: boolean;
   cloudAvailable: boolean;
+  /** Adaptive routing: optional candidate lists (policy envelope still applies). */
+  localCandidates?: string[];
+  cloudCandidates?: string[];
+  taskCategory?: string;
 }
 
 export interface ModelRouter {

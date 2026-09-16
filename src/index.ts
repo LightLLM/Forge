@@ -9,7 +9,7 @@ export type { PersistenceStore } from "./persistence/store.js";
 export { FakeModelProvider } from "./models/fake.js";
 export { OllamaProvider } from "./models/ollama.js";
 export { OpenRouterProvider } from "./models/openrouter.js";
-export { DeterministicModelRouter } from "./models/router.js";
+export { DeterministicModelRouter, type ModelRouter } from "./models/router.js";
 export { createApprovalGate, DenyHighRiskGate, AutoApproveGate, QueueApprovalGate } from "./policy/approvals.js";
 export type { ApprovalGate, ApprovalsConfig, ApprovalMode } from "./policy/approvals.js";
 export { loadToolPacks } from "./tools/packs.js";
@@ -124,6 +124,11 @@ export {
   isTerminalGoalPhase,
 } from "./goal/index.js";
 export type { GoalRecord, GoalPhase, GoalRunResult } from "./goal/index.js";
+export { EvalRunner, EvalStore, loadEvalDataset, BUILTIN_EVAL_DATASET } from "./eval/index.js";
+export type { EvalRunReport, EvalDataset } from "./eval/index.js";
+export { AdaptiveModelRouter, PerformanceStore } from "./routing/index.js";
+export { FailureCorpus } from "./failures/index.js";
+export type { FailureEntry, FailureMatch } from "./failures/index.js";
 export { BudgetTracker } from "./core/budgets/tracker.js";
 export {
   assertTransition,

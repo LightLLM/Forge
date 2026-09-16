@@ -1,0 +1,22 @@
+{
+  "id": "basic-fake",
+  "name": "Basic fake model comparison",
+  "models": [
+    { "id": "good-fake", "provider": "fake", "profile": "success" },
+    { "id": "bad-fake", "provider": "fake", "profile": "fail_message" }
+  ],
+  "cases": [
+    {
+      "id": "complete-task",
+      "category": "coding",
+      "prompt": "Fix the failing test",
+      "expectContent": "ok:"
+    },
+    {
+      "id": "add-helper",
+      "category": "coding",
+      "prompt": "Add a helper function",
+      "expectContent": "ok:"
+    }
+  ]
+}

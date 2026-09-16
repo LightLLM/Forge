@@ -117,18 +117,34 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge exec backends|run`
 - Config: `execution.backend`, `execution.remote`
 
-## v0.14 / M11 (this release)
+## v0.14 / M11 (shipped)
 
 **Goal mode**
 
 - Durable goals (`goals` table) with phased pipeline
-- Architect → plan → execute → integrate → verify → review
 - Resumable task DAG via graph snapshots
 - CLI: `forge goal "<objective>"`, `forge goal resume|status|list`
 - Fixture: `fixtures/goal-mvp`
 
+## v0.17 / M12–M14 (this release)
+
+**Model evaluation (M12)**
+
+- Deterministic fake-model eval datasets + metrics store
+- CLI: `forge eval run|models|report`
+
+**Adaptive router (M13)**
+
+- Performance history ranks policy-allowed model candidates
+- Config: `routing.adaptive`, `localCandidates`, `cloudCandidates`
+
+**Failure intelligence (M14)**
+
+- Structured failure corpus + solution evidence retrieval
+- CLI: `forge failures search`
+
 ## Later
 
-- M12 model evaluation (see milestones)
+- M15 knowledge graph (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

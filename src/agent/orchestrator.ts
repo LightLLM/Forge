@@ -11,7 +11,9 @@ import { ForgeError } from "../core/types.js";
 import { AgentLoop } from "../agent/loop.js";
 import { ContextCompiler } from "../context/compiler.js";
 import type { ModelProvider } from "../models/provider.js";
-import { DeterministicModelRouter } from "../models/router.js";
+import { DeterministicModelRouter, type ModelRouter } from "../models/router.js";
+import { AdaptiveModelRouter } from "../routing/adaptive-router.js";
+import { PerformanceStore } from "../routing/performance-store.js";
 import type { PersistenceStore } from "../persistence/store.js";
 import { DefaultPolicyEngine } from "../policy/engine.js";
 import { createApprovalGate } from "../policy/approvals.js";
@@ -71,17 +73,25 @@ export interface TaskReport {
 }
 
 export class TaskOrchestrator {
-  private readonly router: DeterministicModelRouter;
+  private readonly router: ModelRouter;
+  private readonly performanceStore: PerformanceStore | null = null;
   private readonly contextCompiler = new ContextCompiler();
   private readonly agentLoop = new AgentLoop();
   private tools: RegisteredTool[] = createRepositoryTools();
 
   constructor(private readonly deps: OrchestratorDeps) {
-    this.router = new DeterministicModelRouter({
+    const providers = {
       ollama: deps.ollama,
       openrouter: deps.openrouter,
       fake: deps.fake,
-    });
+    };
+    if (deps.config.routing.adaptive) {
+      this.performanceStore = new PerformanceStore(deps.config.dbPath);
+      this.performanceStore.initialize();
+      this.router = new AdaptiveModelRouter(providers, this.performanceStore);
+    } else {
+      this.router = new DeterministicModelRouter(providers);
+    }
   }
 
   async run(options: RunTaskOptions): Promise<TaskReport> {
@@ -578,6 +588,9 @@ export class TaskOrchestrator {
       cloudAvailable: args.cloudAvailable,
       escalate: args.escalate,
       escalationReason: args.escalationReason,
+      localCandidates: config.routing.localCandidates,
+      cloudCandidates: config.routing.cloudCandidates,
+      taskCategory: "coding",
     });
 
     store.appendEvent(args.task.id, "provider_selected", {

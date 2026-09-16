@@ -18,13 +18,15 @@ import { registerDaemon } from "./commands/daemon.js";
 import { registerJobs } from "./commands/jobs.js";
 import { registerExec } from "./commands/exec.js";
 import { registerGoal } from "./commands/goal.js";
+import { registerEval } from "./commands/eval.js";
+import { registerFailures } from "./commands/failures.js";
 
 const program = new Command();
 
 program
   .name("forge")
   .description("Local-first hybrid autonomous software-engineering harness")
-  .version("0.14.0");
+  .version("0.17.0");
 
 registerInit(program);
 registerDoctor(program);
@@ -44,6 +46,8 @@ registerDaemon(program);
 registerJobs(program);
 registerExec(program);
 registerGoal(program);
+registerEval(program);
+registerFailures(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);

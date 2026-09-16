@@ -41,6 +41,9 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/jobs` | Scheduled engineering analyses + schedule store |
 | `src/execution` | Local / Docker / remote ExecutionBackend |
 | `src/goal` | Durable multi-task goals + resumable pipeline |
+| `src/eval` | Model evaluation datasets and metrics |
+| `src/routing` | Adaptive performance-aware routing |
+| `src/failures` | Structured failure corpus + retrieval |
 | `src/telemetry` | Structured logs with secret redaction |
 
 ## Persistence

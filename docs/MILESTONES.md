@@ -18,9 +18,9 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M9 | Background Jobs | [✓] | 2026-09-16 |
 | M10 | Remote Execution | [✓] | 2026-09-16 |
 | M11 | Goal Mode | [✓] | 2026-09-16 |
-| M12 | Model Evaluation | [ ] | |
-| M13 | Adaptive Router | [ ] | |
-| M14 | Failure Intelligence | [ ] | |
+| M12 | Model Evaluation | [✓] | 2026-09-16 |
+| M13 | Adaptive Router | [✓] | 2026-09-16 |
+| M14 | Failure Intelligence | [✓] | 2026-09-16 |
 | M15 | Knowledge Graph | [ ] | |
 | M16 | Architecture Guardian | [ ] | |
 | M17 | Human Approval Framework | [~] | queue approvals in v0.3; full durable framework later |
@@ -138,6 +138,33 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** planner/architect phases are deterministic; nodes use directive executor not full agent loop
 - **Completion date:** 2026-09-16
 
+## M12 — Model Evaluation
+
+- **Status:** complete
+- **Scope:** EvalRunner, EvalStore, fake model datasets, CLI `forge eval`
+- **Tests:** existing suite + `tests/m12-eval.test.ts`
+- **E2E evidence:** good-fake vs bad-fake compared deterministically with stable pass rates
+- **Limitations:** live provider eval not included; metrics not auto-fed from orchestrator yet
+- **Completion date:** 2026-09-16
+
+## M13 — Adaptive Router
+
+- **Status:** complete
+- **Scope:** PerformanceStore, AdaptiveModelRouter, config `routing.adaptive`
+- **Tests:** existing suite + `tests/m13-adaptive-router.test.ts`
+- **E2E evidence:** picks higher-performing local candidate; local-only never selects cloud despite stats
+- **Limitations:** performance recording not automatic on every task; category classification basic
+- **Completion date:** 2026-09-16
+
+## M14 — Failure Intelligence
+
+- **Status:** complete
+- **Scope:** FailureCorpus, symptom→solution retrieval, CLI `forge failures search`
+- **Tests:** existing suite + `tests/m14-failures.test.ts`
+- **E2E evidence:** known typecheck failure retrieves stored successful fix evidence
+- **Limitations:** keyword retrieval only; not yet wired into orchestrator repair context
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M12 — Model Evaluation** (`forge eval`)
+**M15 — Knowledge Graph** (repository relationships)

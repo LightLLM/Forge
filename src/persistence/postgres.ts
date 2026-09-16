@@ -163,6 +163,34 @@ CREATE TABLE IF NOT EXISTS goals (
 );
 CREATE INDEX IF NOT EXISTS idx_goals_phase ON goals(phase);
 CREATE INDEX IF NOT EXISTS idx_goals_workspace ON goals(workspace_path);
+CREATE TABLE IF NOT EXISTS eval_runs (
+  id TEXT PRIMARY KEY,
+  dataset_id TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  finished_at TEXT NOT NULL,
+  report_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS model_performance (
+  id TEXT PRIMARY KEY,
+  provider_kind TEXT NOT NULL,
+  model TEXT NOT NULL,
+  task_category TEXT NOT NULL,
+  success INTEGER NOT NULL,
+  latency_ms INTEGER NOT NULL,
+  cost_usd REAL NOT NULL DEFAULT 0,
+  recorded_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS failure_corpus (
+  id TEXT PRIMARY KEY,
+  symptom TEXT NOT NULL,
+  cause TEXT,
+  fix TEXT NOT NULL,
+  tags TEXT NOT NULL,
+  success_evidence TEXT,
+  related_solution_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
 
 function nowIso(): string {
