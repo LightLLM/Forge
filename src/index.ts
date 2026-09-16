@@ -66,6 +66,24 @@ export {
   filterToolsForRole,
   BUILTIN_ROLES,
 } from "./agents/index.js";
+export {
+  ForgeDaemon,
+  JobStore,
+  getDaemonStatus,
+  createBuiltinExecutor,
+  assertJobKind,
+  isTerminalJobStatus,
+  requestDaemonStop,
+  readDaemonState,
+} from "./daemon/index.js";
+export type {
+  JobRecord,
+  JobKind,
+  JobStatus,
+  DaemonRuntimeState,
+  JobExecutor,
+  EnqueueJobInput,
+} from "./daemon/index.js";
 export { BudgetTracker } from "./core/budgets/tracker.js";
 export {
   assertTransition,

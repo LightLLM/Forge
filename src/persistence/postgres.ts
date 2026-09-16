@@ -112,6 +112,24 @@ CREATE INDEX IF NOT EXISTS idx_runs_task ON runs(task_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id);
 CREATE INDEX IF NOT EXISTS idx_memories_kind ON memories(kind);
 CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id);
+CREATE TABLE IF NOT EXISTS daemon_jobs (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  status TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL DEFAULT 3,
+  worker_id TEXT,
+  leased_at TEXT,
+  heartbeat_at TEXT,
+  result TEXT,
+  error TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  completed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_daemon_jobs_status ON daemon_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_daemon_jobs_heartbeat ON daemon_jobs(heartbeat_at);
 `;
 
 function nowIso(): string {

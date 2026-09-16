@@ -14,7 +14,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M5 | Task DAG + Parallel Workers | [✓] | 2026-09-16 |
 | M6 | Specialized Agents | [✓] | 2026-09-16 |
 | M7 | Browser QA | [✓] | 2026-09-16 |
-| M8 | Persistent Daemon | [ ] | |
+| M8 | Persistent Daemon | [✓] | 2026-09-16 |
 | M9 | Background Jobs | [ ] | |
 | M10 | Remote Execution | [ ] | |
 | M11 | Goal Mode | [ ] | |
@@ -102,6 +102,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** stub used by default in CI; live Chromium Playwright requires optional install
 - **Completion date:** 2026-09-16
 
+## M8 — Persistent Daemon
+
+- **Status:** complete
+- **Scope:** durable job queue (`daemon_jobs`), ForgeDaemon worker pool, heartbeats, crash recovery, CLI start/status/stop/enqueue
+- **Tests:** existing suite + `tests/m8-daemon.test.ts`
+- **E2E evidence:** orphaned running jobs requeued after simulated crash; stop mid-flight then restart completes remaining work without loss
+- **Limitations:** `agent_task` not yet wired to TaskOrchestrator; JobStore is SQLite-first (schema mirrored in Postgres)
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M8 — Persistent Daemon** (queue, scheduler, worker lifecycle, crash recovery)
+**M9 — Background Jobs** (scheduled engineering analysis)

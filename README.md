@@ -242,6 +242,10 @@ Model self-reports are never treated as success.
 | `forge browserqa list` | List browser QA scenarios |
 | `forge browserqa run [id]` | Run browser QA scenarios |
 | `forge browserqa demo` | Built-in login demo (stub driver) |
+| `forge daemon start` | Start persistent daemon (queue + workers) |
+| `forge daemon status` | Daemon + queue status |
+| `forge daemon stop` | Stop daemon |
+| `forge daemon enqueue <kind>` | Enqueue durable job (`echo`/`sleep`/`write_file`) |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -261,9 +265,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, persistent daemon crash recovery, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.10)
+## Limitations (v0.11)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -274,6 +278,7 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - Task graphs use deterministic decomposition / plan JSON; CLI graph run uses directive executor (not full agent loop per node yet)
 - Specialized roles filter tools/permissions per phase; multi-role pipelines are not yet one command
 - Browser QA uses stub driver by default; Playwright is optional when installed
+- Daemon job kinds are lightweight (`echo`/`sleep`/`write_file`); `agent_task` not wired to orchestrator yet
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure

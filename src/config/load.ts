@@ -37,6 +37,16 @@ export const ForgeConfigSchema = z.object({
       maxParallelWorkers: z.number().int().positive().default(2),
     })
     .default({}),
+  daemon: z
+    .object({
+      /** Max concurrent daemon workers. */
+      maxWorkers: z.number().int().positive().default(2),
+      pollIntervalMs: z.number().int().positive().default(200),
+      heartbeatIntervalMs: z.number().int().positive().default(2_000),
+      /** Requeue running jobs whose heartbeat is older than this. */
+      staleJobMs: z.number().int().positive().default(30_000),
+    })
+    .default({}),
   agents: z
     .object({
       /** Enable specialized role selection for agent phases. */
@@ -315,6 +325,12 @@ export function defaultConfigJson(): string {
       },
       scheduler: {
         maxParallelWorkers: 2,
+      },
+      daemon: {
+        maxWorkers: 2,
+        pollIntervalMs: 200,
+        heartbeatIntervalMs: 2000,
+        staleJobMs: 30000,
       },
       agents: {
         enabled: true,

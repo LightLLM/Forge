@@ -77,7 +77,7 @@ Approval gates, hardened Docker profiles, better relevance
 - Phase role map via `agents.phaseRoles`
 - CLI: `forge roles list|inspect|match`
 
-## v0.10 / M7 (this release)
+## v0.10 / M7 (shipped)
 
 **Browser QA**
 
@@ -87,8 +87,18 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge browserqa list|run|demo`
 - Fixture: `fixtures/web-login`
 
+## v0.11 / M8 (this release)
+
+**Persistent daemon**
+
+- Durable job queue in SQLite (`daemon_jobs`)
+- Worker pool with claim / heartbeat / complete / fail
+- Crash recovery requeues orphaned running jobs
+- CLI: `forge daemon start|status|stop|enqueue`
+- Config: `daemon.maxWorkers`, poll/heartbeat/stale intervals
+
 ## Later
 
-- M8 daemon, background jobs, goal mode (see milestones)
+- M9 background jobs / goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)
