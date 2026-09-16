@@ -181,7 +181,9 @@ Priority: CLI flags > environment > `forge.config.json` > defaults.
 - `commands.dockerHardened`: drop capabilities, no-new-privileges, read-only rootfs + tmpfs (default `true`)
 - `verification.playwright`: run Playwright when detected (`auto`), force (`on`), or skip (`off`)
 - `git.createTaskBranch`: create `forge/<task-id>` before work
-- `approvals.mode`: `off` | `prompt` (TTY / `FORGE_AUTO_APPROVE=1`) | `deny-high-risk`
+- `approvals.mode`: `off` | `prompt` (TTY / `FORGE_AUTO_APPROVE=1`) | `queue` (detached: `forge approve` / `forge deny`) | `deny-high-risk`
+- `tools.packs`: built-in names (`repository`) and/or paths to modules exporting `createTools()`
+- `FORGE_DATABASE_URL`: optional PostgreSQL URL (schema ensure + `PostgresStore` API; CLI agent loop still uses SQLite)
 - `ui.streamProgress`: show Ollama streaming progress on stderr
 
 ## Verification
@@ -206,6 +208,9 @@ Model self-reports are never treated as success.
 | `forge status <task-id>` | Status + runs |
 | `forge inspect <task-id>` | Full audit trail |
 | `forge models` | Configured + available models |
+| `forge approvals [task-id]` | List pending approvals |
+| `forge approve <id>` | Approve a queued tool call |
+| `forge deny <id>` | Deny a queued tool call |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -227,16 +232,17 @@ pnpm test
 
 Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.2)
+## Limitations (v0.3)
 
-- Single-machine SQLite persistence via Node's experimental `node:sqlite`
-- Docker sandbox is optional (`commands.sandbox`); default is `host` (safer with native `node_modules` on Windows/macOS)
+- Single-machine SQLite is the default sync store for the agent loop
+- PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
+- Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure
 - Conservative Git (no push/merge/force); optional task branches only
-- Approval `prompt` mode needs a TTY (or `FORGE_AUTO_APPROVE=1`)
+- Approval `prompt` needs a TTY; use `queue` + `forge approve` for detached runs
+- Tool packs cannot escalate privileges — PolicyEngine still decides
 - Tool-calling quality depends on the selected model
-- OpenRouter cost may be reported as unknown when the API omits it
 - Global `forge` binary may collide with Atlassian Forge / Foundry — use `pnpm forge` or `forge-harness`
 
 ## Roadmap

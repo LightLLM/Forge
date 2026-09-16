@@ -20,6 +20,8 @@ import {
   DEFAULT_COMMAND_ALLOWLIST,
   runAllowedCommand,
 } from "../tools/repository.js";
+import { loadToolPacks } from "../tools/packs.js";
+import type { RegisteredTool } from "../tools/types.js";
 import type { Logger } from "../telemetry/logger.js";
 import { VerificationEngine } from "../verification/engine.js";
 import { Workspace } from "../workspace/workspace.js";
@@ -52,9 +54,9 @@ export interface TaskReport {
 
 export class TaskOrchestrator {
   private readonly router: DeterministicModelRouter;
-  private readonly tools = createRepositoryTools();
   private readonly contextCompiler = new ContextCompiler();
   private readonly agentLoop = new AgentLoop();
+  private tools: RegisteredTool[] = createRepositoryTools();
 
   constructor(private readonly deps: OrchestratorDeps) {
     this.router = new DeterministicModelRouter({
@@ -68,6 +70,8 @@ export class TaskOrchestrator {
     const { store, config, logger } = this.deps;
     const workspacePath = options.workspacePath ?? config.workspacePath;
     const workspace = new Workspace(workspacePath);
+
+    this.tools = await loadToolPacks(workspacePath, config.tools.packs);
 
     const project = store.upsertProject(workspacePath, basename(workspacePath));
     let task = store.createTask({
@@ -121,6 +125,8 @@ export class TaskOrchestrator {
       {
         mode: config.approvals.mode,
         risks: config.approvals.risks,
+        queueTimeoutMs: config.approvals.queueTimeoutMs,
+        queuePollMs: config.approvals.queuePollMs,
       },
       { store, logger },
     );

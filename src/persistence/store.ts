@@ -95,9 +95,11 @@ export interface PersistenceStore {
   listArtifacts(taskId: string): ArtifactRecord[];
 
   createApproval(taskId: string, action: string, reason?: string | null): ApprovalRecord;
+  getApproval(id: string): ApprovalRecord | null;
   resolveApproval(
     id: string,
     status: "approved" | "denied",
   ): ApprovalRecord;
   listApprovals(taskId: string): ApprovalRecord[];
+  listPendingApprovals(taskId?: string): ApprovalRecord[];
 }

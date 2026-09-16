@@ -8,21 +8,20 @@
 
 ## v0.1 (shipped)
 
-1. Optional Docker command sandbox
-2. Richer escalation packaging
-3. Task branch creation
-4. Streaming progress
-5. Playwright detection
+Optional Docker sandbox, escalation packaging, task branches, streaming, Playwright
 
-## v0.2 (this release)
+## v0.2 (shipped)
 
-1. **Approval gates** for high-risk tools — `approvals.mode`: `off` | `prompt` | `deny-high-risk`
-2. **Hardened Docker profiles** — no-new-privileges, cap-drop ALL, read-only rootfs + tmpfs, pids/memory limits
-3. **Better relevance** — entrypoint detection, git-diff boost, 2-hop import neighborhoods
+Approval gates, hardened Docker profiles, better relevance
+
+## v0.3 (this release)
+
+1. **Detached approvals** — `approvals.mode=queue` + `forge approvals` / `forge approve` / `forge deny`
+2. **Plugin tool packs** — `tools.packs` loads built-in + external modules (still policy-gated)
+3. **PostgreSQL store module** — `PostgresStore` + schema; CLI still defaults to SQLite sync I/O
 
 ## Later
 
-- PostgreSQL persistence backend
-- Plugin tool packs (still policy-gated)
+- Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)
-- Approval UX via `forge approve` for detached runs
+- Richer pack marketplace / signing

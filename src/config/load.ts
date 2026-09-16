@@ -64,14 +64,24 @@ export const ForgeConfigSchema = z.object({
       /**
        * off — no extra gates (default)
        * prompt — ask on TTY for write/execute (FORGE_AUTO_APPROVE=1 to auto-yes)
+       * queue — persist pending approval; resolve via `forge approve` / `forge deny`
        * deny-high-risk — automatically deny write/execute
        */
-      mode: z.enum(["off", "prompt", "deny-high-risk"]).default("off"),
+      mode: z.enum(["off", "prompt", "queue", "deny-high-risk"]).default("off"),
       risks: z
         .array(z.enum(["read", "write", "execute", "network"]))
         .default(["write", "execute"]),
+      queueTimeoutMs: z.number().int().positive().default(900_000),
+      queuePollMs: z.number().int().positive().default(1_000),
     })
     .default({}),
+  tools: z
+    .object({
+      /** Built-in pack names (e.g. "repository") and/or paths to pack modules. */
+      packs: z.array(z.string()).default(["repository"]),
+    })
+    .default({}),
+  databaseUrl: z.string().optional(),
   ui: z
     .object({
       /** Stream model token progress to stderr during long local runs. */
@@ -87,6 +97,7 @@ export interface ResolvedConfig extends ForgeConfig {
   openRouterApiKey: string | null;
   dbPath: string;
   workspacePath: string;
+  databaseUrl?: string;
 }
 
 export interface CliOverrides {
@@ -167,6 +178,8 @@ export function loadConfig(
     readEnv("FORGE_DB_PATH") ?? ".forge/forge.db",
   );
 
+  const databaseUrl = readEnv("FORGE_DATABASE_URL") ?? parsed.databaseUrl;
+
   return {
     ...parsed,
     mode,
@@ -182,6 +195,7 @@ export function loadConfig(
     ollamaBaseUrl,
     openRouterApiKey,
     dbPath,
+    databaseUrl,
     workspacePath: resolve(workspacePath),
   };
 }
@@ -226,6 +240,9 @@ export function defaultConfigJson(): string {
       approvals: {
         mode: "off",
         risks: ["write", "execute"],
+      },
+      tools: {
+        packs: ["repository"],
       },
       ui: {
         streamProgress: true,

@@ -555,19 +555,24 @@ export class SqliteStore implements PersistenceStore {
         `UPDATE approvals SET status = ?, resolved_at = ? WHERE id = ?`,
       )
       .run(status, ts, id);
-    const rows = this.db
-      .prepare(`SELECT * FROM approvals WHERE id = ?`)
-      .all(id) as Array<{
-      id: string;
-      task_id: string;
-      action: string;
-      status: "pending" | "approved" | "denied";
-      reason: string | null;
-      created_at: string;
-      resolved_at: string | null;
-    }>;
-    const row = rows[0];
-    if (!row) throw new Error(`Approval not found: ${id}`);
+    const updated = this.getApproval(id);
+    if (!updated) throw new Error(`Approval not found: ${id}`);
+    return updated;
+  }
+
+  getApproval(id: string): ApprovalRecord | null {
+    const row = this.db.prepare(`SELECT * FROM approvals WHERE id = ?`).get(id) as
+      | {
+          id: string;
+          task_id: string;
+          action: string;
+          status: "pending" | "approved" | "denied";
+          reason: string | null;
+          created_at: string;
+          resolved_at: string | null;
+        }
+      | undefined;
+    if (!row) return null;
     return {
       id: row.id,
       taskId: row.task_id,
@@ -583,6 +588,34 @@ export class SqliteStore implements PersistenceStore {
     const rows = this.db
       .prepare(`SELECT * FROM approvals WHERE task_id = ? ORDER BY created_at ASC`)
       .all(taskId) as Array<{
+      id: string;
+      task_id: string;
+      action: string;
+      status: "pending" | "approved" | "denied";
+      reason: string | null;
+      created_at: string;
+      resolved_at: string | null;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      taskId: row.task_id,
+      action: row.action,
+      status: row.status,
+      reason: row.reason,
+      createdAt: row.created_at,
+      resolvedAt: row.resolved_at,
+    }));
+  }
+
+  listPendingApprovals(taskId?: string): ApprovalRecord[] {
+    if (taskId) {
+      return this.listApprovals(taskId).filter((a) => a.status === "pending");
+    }
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM approvals WHERE status = 'pending' ORDER BY created_at ASC`,
+      )
+      .all() as Array<{
       id: string;
       task_id: string;
       action: string;
