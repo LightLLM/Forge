@@ -1,0 +1,11 @@
+{
+  "rules": [
+    {
+      "id": "ui-no-db",
+      "description": "UI cannot directly import database modules",
+      "kind": "no_import",
+      "from": "src/ui",
+      "to": "src/db"
+    }
+  ]
+}
