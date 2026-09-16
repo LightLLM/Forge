@@ -48,6 +48,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/architecture` | Architecture rules + verification guardian |
 | `src/dashboard` | Operator HTTP UI over PersistenceStore |
 | `src/v1` | Forge v1 capability checklist + eval catalog helpers |
+| `src/gateway` | Interaction Gateway API, sessions, SSE, channels, web GUI |
 | `src/telemetry` | Structured logs with secret redaction |
 
 ## Persistence

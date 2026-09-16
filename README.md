@@ -315,6 +315,11 @@ Model self-reports are never treated as success.
 | `forge kg deps <from> <to>` | Dependency path between files |
 | `forge kg imports <file>` | List imports of a file |
 | `forge dashboard start` | Local operator dashboard (same backend as CLI) |
+| `forge start` / `forge gateway start` | Interaction Gateway API + web GUI + channels |
+| `forge gateway status` | Gateway / channel health |
+| `forge gateway channels` | Channel adapter status |
+| `forge gateway pairings` | Pending Telegram/Slack pairings |
+| `forge gateway setup` | Channel credential setup help |
 | `forge skills propose` | Record a skill improvement proposal |
 | `forge skills proposals` | List skill proposals |
 | `forge skills apply-proposal` | Approve/install skill proposal (human only) |

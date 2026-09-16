@@ -22,13 +22,14 @@ import { registerEval } from "./commands/eval.js";
 import { registerFailures } from "./commands/failures.js";
 import { registerKg } from "./commands/kg.js";
 import { registerDashboard } from "./commands/dashboard.js";
+import { registerGateway, registerStart } from "./commands/gateway.js";
 
 const program = new Command();
 
 program
   .name("forge")
   .description("Local-first hybrid autonomous software-engineering harness")
-  .version("1.0.0-rc.1");
+  .version("1.1.0-rc.1");
 
 registerInit(program);
 registerDoctor(program);
@@ -52,6 +53,8 @@ registerEval(program);
 registerFailures(program);
 registerKg(program);
 registerDashboard(program);
+registerGateway(program);
+registerStart(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);

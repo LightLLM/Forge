@@ -129,6 +129,21 @@ export type { EvalRunReport, EvalDataset } from "./eval/index.js";
 export { AdaptiveModelRouter, PerformanceStore } from "./routing/index.js";
 export { FailureCorpus } from "./failures/index.js";
 export type { FailureEntry, FailureMatch } from "./failures/index.js";
+export {
+  GatewayServer,
+  GatewayEventBus,
+  InteractionSessionStore,
+  GatewayControlPlane,
+  ChannelManager,
+  FakeChannelAdapter,
+  filterEventsForChannel,
+} from "./gateway/index.js";
+export type {
+  GatewayMessage,
+  InteractionSession,
+  ForgeGatewayEvent,
+  ChannelAdapter,
+} from "./gateway/index.js";
 export { KnowledgeAnalyzer, KnowledgeQuery } from "./knowledge/index.js";
 export type { KnowledgeGraph, DependencyAnswer } from "./knowledge/index.js";
 export { ArchitectureEvaluator, ArchitecturePolicyLoader } from "./architecture/index.js";

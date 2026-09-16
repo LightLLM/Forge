@@ -27,6 +27,8 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M18 | Operator Dashboard | [✓] | 2026-09-16 |
 | M19 | Self-Improving Skills | [✓] | 2026-09-16 |
 | M20 | Forge v1 RC | [✓] | 2026-09-16 |
+| GUI-0 | Gateway API + sessions + SSE | [✓] | 2026-09-16 |
+| GUI-1–4 / GW-1–4 / UX-1 | Web GUI + Telegram/Slack + WhatsApp stub | [✓] | 2026-09-16 |
 
 ---
 

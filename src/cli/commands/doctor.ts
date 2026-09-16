@@ -139,6 +139,45 @@ export function registerDoctor(program: Command): void {
           : `unavailable; mode=${config.commands.sandbox} (host execution used when auto)`,
       });
 
+      // Optional interaction gateway / channels (warn only — never fail overall for disabled channels)
+      try {
+        const gw = await fetch("http://127.0.0.1:8787/api/health", {
+          signal: AbortSignal.timeout(800),
+        });
+        checks.push({
+          name: "Gateway API",
+          status: gw.ok ? "ok" : "warn",
+          detail: gw.ok
+            ? "http://127.0.0.1:8787 healthy"
+            : `responded ${gw.status}`,
+        });
+      } catch {
+        checks.push({
+          name: "Gateway API",
+          status: "warn",
+          detail: "not running (forge-harness gateway start)",
+        });
+      }
+      checks.push({
+        name: "Telegram",
+        status: process.env.TELEGRAM_BOT_TOKEN ? "ok" : "warn",
+        detail: process.env.TELEGRAM_BOT_TOKEN
+          ? "token set (value hidden)"
+          : "disabled (optional)",
+      });
+      checks.push({
+        name: "Slack",
+        status: process.env.SLACK_BOT_TOKEN ? "ok" : "warn",
+        detail: process.env.SLACK_BOT_TOKEN
+          ? "token set (value hidden)"
+          : "disabled (optional)",
+      });
+      checks.push({
+        name: "WhatsApp",
+        status: "warn",
+        detail: "adapter stubbed (optional)",
+      });
+
       // Verification commands
       const scripts = readPackageScripts(cwd);
       const verBits = [

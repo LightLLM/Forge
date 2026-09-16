@@ -157,8 +157,17 @@ Approval gates, hardened Docker profiles, better relevance
 
 **Forge v1 RC (M20)** — 20-capability checklist + eval-suite catalog
 
+## v1.1.0-rc.1 / Interaction Gateway + Web GUI
+
+- Gateway API + interaction sessions + SSE (`src/gateway`)
+- Web operator GUI at `http://127.0.0.1:8787/`
+- Channel adapters: Fake (CI), Telegram, Slack, WhatsApp stub
+- CLI: `forge start`, `forge gateway …`
+- Docs: [gui-gateway.md](gui-gateway.md), [gui-gateway-baseline.md](gui-gateway-baseline.md)
+
 ## Later
 
 - Deeper knowledge-graph edges (symbols, routes, tables)
 - Fully async orchestrator wired to PostgreSQL end-to-end
+- WhatsApp Cloud API production adapter
 - Hosted control plane (explicit non-goal until local loop is excellent)
