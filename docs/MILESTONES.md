@@ -13,7 +13,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M4 | Worktrees | [✓] | 2026-09-16 |
 | M5 | Task DAG + Parallel Workers | [✓] | 2026-09-16 |
 | M6 | Specialized Agents | [✓] | 2026-09-16 |
-| M7 | Browser QA | [ ] | |
+| M7 | Browser QA | [✓] | 2026-09-16 |
 | M8 | Persistent Daemon | [ ] | |
 | M9 | Background Jobs | [ ] | |
 | M10 | Remote Execution | [ ] | |
@@ -93,6 +93,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** model preference is advisory under routing mode; full multi-role pipelines not yet a single CLI command
 - **Completion date:** 2026-09-16
 
+## M7 — Browser QA
+
+- **Status:** complete
+- **Scope:** BrowserQaEngine, stub + Playwright drivers, scenario JSON, verification integration, screenshots, CLI, web-login fixture
+- **Tests:** existing suite + `tests/m7-browserqa.test.ts`
+- **E2E evidence:** login fixture navigate→type→click→assert success with screenshots; VerificationEngine browser_qa check passes; bad credentials fail
+- **Limitations:** stub used by default in CI; live Chromium Playwright requires optional install
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M7 — Browser QA** (Playwright verification)
+**M8 — Persistent Daemon** (queue, scheduler, worker lifecycle, crash recovery)

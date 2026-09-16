@@ -36,7 +36,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/agent` | Bounded loop + orchestrator |
 | `src/agents` | Specialized role definitions + selection |
 | `src/scheduler` | Task DAG + parallel worker scheduler |
-| `src/verification` | Independent checks |
+| `src/verification` | Independent checks + browser QA |
 | `src/telemetry` | Structured logs with secret redaction |
 
 ## Persistence

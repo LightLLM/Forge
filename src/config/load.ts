@@ -86,6 +86,9 @@ export const ForgeConfigSchema = z.object({
       gitDiffCheck: z.boolean().default(true),
       /** Auto-run Playwright when detected in package.json (or force on/off). */
       playwright: z.enum(["auto", "on", "off"]).default("auto"),
+      /** Declarative Forge browser QA scenarios. */
+      browserQa: z.enum(["auto", "on", "off"]).default("auto"),
+      browserQaDriver: z.enum(["auto", "playwright", "stub"]).default("auto"),
     })
     .default({}),
   commands: z
@@ -328,6 +331,8 @@ export function defaultConfigJson(): string {
         build: false,
         gitDiffCheck: true,
         playwright: "auto",
+        browserQa: "auto",
+        browserQaDriver: "auto",
       },
       commands: {
         sandbox: "host",

@@ -183,6 +183,8 @@ Priority: CLI flags > environment > `forge.config.json` > defaults.
 - `commands.sandbox`: `host` (default), `auto` (Docker when available), or `docker` (required)
 - `commands.dockerHardened`: drop capabilities, no-new-privileges, read-only rootfs + tmpfs (default `true`)
 - `verification.playwright`: run Playwright when detected (`auto`), force (`on`), or skip (`off`)
+- `verification.browserQa`: run Forge browser scenarios when present (`auto`), force (`on`), or skip (`off`)
+- `verification.browserQaDriver`: `auto` | `playwright` | `stub`
 - `git.createTaskBranch`: create `forge/<task-id>` before work (ignored when worktrees enabled)
 - `git.useWorktrees`: isolate each task in `.forge/worktrees` via `git worktree`
 - `git.acquireLease`: exclusive lease on the effective workspace path (auto-on with `useWorktrees`)
@@ -237,6 +239,9 @@ Model self-reports are never treated as success.
 | `forge roles list` | List specialized agent roles |
 | `forge roles inspect <id>` | Show role permissions/tools |
 | `forge roles match "<objective>"` | Preview role selection |
+| `forge browserqa list` | List browser QA scenarios |
+| `forge browserqa run [id]` | Run browser QA scenarios |
+| `forge browserqa demo` | Built-in login demo (stub driver) |
 
 `forge run` options: `--mode`, `--local-model`, `--cloud-model`, `--max-turns`, `--max-repairs`, `--timeout`, `--workspace`.
 
@@ -256,9 +261,9 @@ pnpm build
 pnpm test
 ```
 
-Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, and fake-provider end-to-end loops against `fixtures/broken-app`.
+Coverage includes state machine, policy, filesystem escape attempts, router modes, budgets, memory retrieval, skill routing, MCP allowlists, worktree isolation, task DAG scheduling, specialized roles, browser QA, and fake-provider end-to-end loops against `fixtures/broken-app`.
 
-## Limitations (v0.9)
+## Limitations (v0.10)
 
 - Single-machine SQLite is the default sync store for the agent loop
 - PostgreSQL (`PostgresStore`) is available for programmatic/async use; full async orchestrator wiring is next
@@ -268,6 +273,7 @@ Coverage includes state machine, policy, filesystem escape attempts, router mode
 - Worktrees are opt-in (`git.useWorktrees`); no automatic merge yet
 - Task graphs use deterministic decomposition / plan JSON; CLI graph run uses directive executor (not full agent loop per node yet)
 - Specialized roles filter tools/permissions per phase; multi-role pipelines are not yet one command
+- Browser QA uses stub driver by default; Playwright is optional when installed
 - Docker sandbox is optional (`commands.sandbox`); default is `host`
 - Hardened Docker may break tools that need writes outside `/workspace` or `/tmp`
 - Deterministic relevance (no vector DB); improved with entrypoints, diffs, and import closure

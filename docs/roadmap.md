@@ -68,7 +68,7 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge graph validate|run`
 - Fixture: `fixtures/multi-part-plan`
 
-## v0.9 / M6 (this release)
+## v0.9 / M6 (shipped)
 
 **Specialized agents**
 
@@ -77,8 +77,18 @@ Approval gates, hardened Docker profiles, better relevance
 - Phase role map via `agents.phaseRoles`
 - CLI: `forge roles list|inspect|match`
 
+## v0.10 / M7 (this release)
+
+**Browser QA**
+
+- Declarative scenarios (`navigate`/`click`/`type`/`assert`/`screenshot`)
+- Stub driver for CI + optional Playwright driver
+- Integrated into VerificationEngine (`verification.browserQa`)
+- CLI: `forge browserqa list|run|demo`
+- Fixture: `fixtures/web-login`
+
 ## Later
 
-- M7 browser QA, daemon, goal mode (see milestones)
+- M8 daemon, background jobs, goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

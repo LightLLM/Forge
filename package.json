@@ -1,6 +1,6 @@
 {
   "name": "forge-harness",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Local-first hybrid autonomous software-engineering harness",
   "type": "module",
   "bin": {

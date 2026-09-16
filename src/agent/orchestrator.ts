@@ -241,6 +241,8 @@ export class TaskOrchestrator {
       build: config.verification.build,
       gitDiffCheck: config.verification.gitDiffCheck,
       playwright: config.verification.playwright,
+      browserQa: config.verification.browserQa,
+      browserQaDriver: config.verification.browserQaDriver,
       commandTimeoutMs: config.limits.commandTimeoutMs,
       maxCommandOutputChars: config.limits.maxCommandOutputChars,
       commandAllowlist: config.commands.allowlist,

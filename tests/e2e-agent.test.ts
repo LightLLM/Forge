@@ -109,6 +109,7 @@ describe("agent runtime E2E (fake provider)", () => {
     config.verification.build = false;
     config.verification.gitDiffCheck = false;
     config.verification.playwright = "off";
+    config.verification.browserQa = "off";
 
     const store = new SqliteStore(config.dbPath);
     store.initialize();
@@ -183,6 +184,8 @@ describe("agent runtime E2E (fake provider)", () => {
       build: false,
       gitDiffCheck: false,
       playwright: "off",
+      browserQa: "off",
+      browserQaDriver: "stub",
     };
 
     const store = new SqliteStore(config.dbPath);
@@ -284,6 +287,8 @@ describe("agent runtime E2E (fake provider)", () => {
       build: false,
       gitDiffCheck: false,
       playwright: "off",
+      browserQa: "off",
+      browserQaDriver: "stub",
     };
     config.openRouterApiKey = "test-key";
 
@@ -374,6 +379,8 @@ describe("local-only never selects openrouter", () => {
         build: false,
         gitDiffCheck: false,
         playwright: "off",
+        browserQa: "off",
+        browserQaDriver: "stub",
       };
       config.openRouterApiKey = "should-not-matter";
 

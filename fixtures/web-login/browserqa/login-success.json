@@ -1,0 +1,16 @@
+{
+  "id": "login-success",
+  "name": "Login success flow",
+  "description": "Navigate login, enter demo credentials, assert success",
+  "viewport": { "width": 1280, "height": 720 },
+  "actions": [
+    { "type": "navigate", "target": "/" },
+    { "type": "assertText", "expected": "Sign in" },
+    { "type": "type", "target": "#username", "value": "demo" },
+    { "type": "type", "target": "#password", "value": "demo" },
+    { "type": "screenshot", "value": "before-submit.png" },
+    { "type": "click", "target": "#login-btn" },
+    { "type": "assertText", "expected": "Login successful" },
+    { "type": "screenshot", "value": "after-login.png" }
+  ]
+}

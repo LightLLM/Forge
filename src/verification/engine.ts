@@ -7,6 +7,7 @@ import {
 } from "../tools/repository.js";
 import type { SandboxOptions } from "../tools/sandbox.js";
 import type { Workspace } from "../workspace/workspace.js";
+import { BrowserQaEngine } from "./browser/index.js";
 
 export interface VerificationOptions {
   typecheck: boolean;
@@ -15,6 +16,9 @@ export interface VerificationOptions {
   build: boolean;
   gitDiffCheck: boolean;
   playwright: "auto" | "on" | "off";
+  /** Forge declarative browser QA scenarios (.forge/browserqa/*.json). */
+  browserQa: "auto" | "on" | "off";
+  browserQaDriver?: "auto" | "playwright" | "stub";
   commandTimeoutMs: number;
   maxCommandOutputChars: number;
   commandAllowlist?: string[];
@@ -101,6 +105,9 @@ export class VerificationEngine {
       });
     }
 
+    const browserQaCheck = await this.runBrowserQa(workspace);
+    if (browserQaCheck) checks.push(browserQaCheck);
+
     const failed = checks.filter((c) => c.status === "failed");
     const runnable = checks.filter((c) => c.status !== "skipped");
     const status: VerificationResult["status"] =
@@ -154,6 +161,56 @@ export class VerificationEngine {
         stderr: err instanceof Error ? err.message : String(err),
         durationMs: Date.now() - started,
         command,
+      };
+    }
+  }
+
+  private async runBrowserQa(workspace: Workspace): Promise<VerificationCheck | null> {
+    const mode = this.options.browserQa ?? "auto";
+    if (mode === "off") return null;
+
+    const hasScenarios =
+      existsSync(join(workspace.root, ".forge", "browserqa")) ||
+      existsSync(join(workspace.root, "browserqa"));
+    if (mode === "auto" && !hasScenarios) return null;
+    if (mode === "on" && !hasScenarios) {
+      return {
+        name: "browser_qa",
+        status: "failed",
+        stderr:
+          "browserQa forced on but no scenarios in .forge/browserqa or browserqa/",
+      };
+    }
+
+    const started = Date.now();
+    try {
+      const engine = new BrowserQaEngine({
+        workspaceRoot: workspace.root,
+        driver: this.options.browserQaDriver ?? "auto",
+      });
+      const results = await engine.runAll();
+      if (results.length === 0) {
+        return {
+          name: "browser_qa",
+          status: "skipped",
+          durationMs: Date.now() - started,
+        };
+      }
+      const failed = results.filter((r) => r.status === "failed");
+      return {
+        name: "browser_qa",
+        status: failed.length === 0 ? "passed" : "failed",
+        stdout: results.map((r) => r.summary).join("\n"),
+        stderr: failed.map((r) => r.summary).join("\n") || undefined,
+        durationMs: Date.now() - started,
+        command: `browserqa:${results.map((r) => r.scenarioId).join(",")}`,
+      };
+    } catch (err) {
+      return {
+        name: "browser_qa",
+        status: "failed",
+        stderr: err instanceof Error ? err.message : String(err),
+        durationMs: Date.now() - started,
       };
     }
   }

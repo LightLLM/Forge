@@ -37,6 +37,11 @@ export { buildDockerRunArgs } from "./tools/sandbox.js";
 export { rankRelevantFiles } from "./context/relevance.js";
 export { hasPlaywright, VerificationEngine } from "./verification/engine.js";
 export {
+  BrowserQaEngine,
+  StubBrowserDriver,
+  PlaywrightBrowserDriver,
+} from "./verification/browser/index.js";
+export {
   isDockerAvailable,
   resolveCommandBackend,
   executeCommand,
