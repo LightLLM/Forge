@@ -15,7 +15,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M6 | Specialized Agents | [✓] | 2026-09-16 |
 | M7 | Browser QA | [✓] | 2026-09-16 |
 | M8 | Persistent Daemon | [✓] | 2026-09-16 |
-| M9 | Background Jobs | [ ] | |
+| M9 | Background Jobs | [✓] | 2026-09-16 |
 | M10 | Remote Execution | [ ] | |
 | M11 | Goal Mode | [ ] | |
 | M12 | Model Evaluation | [ ] | |
@@ -111,6 +111,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** `agent_task` not yet wired to TaskOrchestrator; JobStore is SQLite-first (schema mirrored in Postgres)
 - **Completion date:** 2026-09-16
 
+## M9 — Background Jobs
+
+- **Status:** complete
+- **Scope:** analysis catalog, durable schedules, JobScheduler→daemon enqueue, artifacts/proposals, CLI `forge jobs`
+- **Tests:** existing suite + `tests/m9-jobs.test.ts`
+- **E2E evidence:** scheduled fixture `todo_analysis` fires, completes, and records findings + artifact under `.forge/artifacts/jobs/`
+- **Limitations:** interval schedules only (no cron); analyses are heuristic/report-only; no auto-remediation
+- **Completion date:** 2026-09-16
+
 ## Next incomplete
 
-**M9 — Background Jobs** (scheduled engineering analysis)
+**M10 — Remote Execution** (execution backend abstraction)

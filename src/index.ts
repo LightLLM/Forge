@@ -84,6 +84,22 @@ export type {
   JobExecutor,
   EnqueueJobInput,
 } from "./daemon/index.js";
+export {
+  ANALYSIS_CATALOG,
+  getAnalysisDefinition,
+  runAnalysis,
+  writeAnalysisArtifact,
+  ScheduleStore,
+  JobScheduler,
+  assertAnalysisId,
+} from "./jobs/index.js";
+export type {
+  AnalysisId,
+  AnalysisReport,
+  AnalysisFinding,
+  ScheduleRecord,
+  CreateScheduleInput,
+} from "./jobs/index.js";
 export { BudgetTracker } from "./core/budgets/tracker.js";
 export {
   assertTransition,

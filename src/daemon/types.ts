@@ -3,7 +3,7 @@ import { ForgeError } from "../core/types.js";
 /** Durable daemon job lifecycle. */
 export type JobStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 
-export type JobKind = "echo" | "sleep" | "write_file" | "agent_task";
+export type JobKind = "echo" | "sleep" | "write_file" | "agent_task" | "analysis";
 
 export interface JobRecord {
   id: string;
@@ -61,7 +61,13 @@ export function isTerminalJobStatus(status: JobStatus): boolean {
 }
 
 export function assertJobKind(kind: string): asserts kind is JobKind {
-  if (kind !== "echo" && kind !== "sleep" && kind !== "write_file" && kind !== "agent_task") {
+  if (
+    kind !== "echo" &&
+    kind !== "sleep" &&
+    kind !== "write_file" &&
+    kind !== "agent_task" &&
+    kind !== "analysis"
+  ) {
     throw new ForgeError(`Unknown job kind: ${kind}`, "INVALID_JOB_KIND", { kind });
   }
 }

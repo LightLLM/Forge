@@ -45,6 +45,14 @@ export const ForgeConfigSchema = z.object({
       heartbeatIntervalMs: z.number().int().positive().default(2_000),
       /** Requeue running jobs whose heartbeat is older than this. */
       staleJobMs: z.number().int().positive().default(30_000),
+      /** Fire due analysis schedules from the daemon loop. */
+      schedulesEnabled: z.boolean().default(true),
+    })
+    .default({}),
+  jobs: z
+    .object({
+      /** Default interval when CLI omits --every (ms). */
+      defaultEveryMs: z.number().int().positive().default(86_400_000),
     })
     .default({}),
   agents: z
@@ -331,6 +339,10 @@ export function defaultConfigJson(): string {
         pollIntervalMs: 200,
         heartbeatIntervalMs: 2000,
         staleJobMs: 30000,
+        schedulesEnabled: true,
+      },
+      jobs: {
+        defaultEveryMs: 86400000,
       },
       agents: {
         enabled: true,

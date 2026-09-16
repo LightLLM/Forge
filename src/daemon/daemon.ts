@@ -10,6 +10,7 @@ import {
 import { createBuiltinExecutor } from "./executors.js";
 import type { DaemonRuntimeState, JobExecutor } from "./types.js";
 import { ForgeError } from "../core/types.js";
+import { JobScheduler, ScheduleStore } from "../jobs/index.js";
 
 export interface ForgeDaemonOptions {
   workspacePath: string;
@@ -19,6 +20,8 @@ export interface ForgeDaemonOptions {
   heartbeatIntervalMs?: number;
   /** Jobs without heartbeat for this long are treated as orphans. */
   staleJobMs?: number;
+  /** When false, skip firing due schedules. Default true. */
+  schedulesEnabled?: boolean;
   executor?: JobExecutor;
   logger?: Logger;
   /** When true, recover all running jobs on start (crash restart). Default true. */
@@ -30,11 +33,14 @@ export interface ForgeDaemonHandle {
   done: Promise<void>;
   stop(): Promise<void>;
   store: JobStore;
+  schedules: ScheduleStore;
+  scheduler: JobScheduler;
   getState(): DaemonRuntimeState | null;
 }
 
 /**
- * Persistent Forge daemon: durable job queue, worker pool, crash recovery.
+ * Persistent Forge daemon: durable job queue, worker pool, crash recovery,
+ * and scheduled background engineering analyses.
  */
 export class ForgeDaemon {
   private readonly opts: Required<
@@ -47,12 +53,14 @@ export class ForgeDaemon {
       | "heartbeatIntervalMs"
       | "staleJobMs"
       | "recoverOnStart"
+      | "schedulesEnabled"
     >
   > & {
     executor: JobExecutor;
     logger?: Logger;
   };
   private store: JobStore | null = null;
+  private scheduleStore: ScheduleStore | null = null;
   private stopping = false;
   private active = new Map<string, AbortController>();
   private loopTimer: ReturnType<typeof setTimeout> | null = null;
@@ -67,6 +75,7 @@ export class ForgeDaemon {
       heartbeatIntervalMs: options.heartbeatIntervalMs ?? 2_000,
       staleJobMs: options.staleJobMs ?? 30_000,
       recoverOnStart: options.recoverOnStart ?? true,
+      schedulesEnabled: options.schedulesEnabled ?? true,
       executor: options.executor ?? createBuiltinExecutor(),
       logger: options.logger,
     };
@@ -89,6 +98,17 @@ export class ForgeDaemon {
     const store = new JobStore(this.opts.dbPath);
     store.initialize();
     this.store = store;
+
+    const scheduleStore = new ScheduleStore(this.opts.dbPath);
+    scheduleStore.initialize();
+    this.scheduleStore = scheduleStore;
+
+    const scheduler = new JobScheduler({
+      scheduleStore,
+      jobStore: store,
+      logger: this.opts.logger,
+    });
+
     this.stopping = false;
 
     let recovered = 0;
@@ -120,6 +140,7 @@ export class ForgeDaemon {
       pid: process.pid,
       maxWorkers: this.opts.maxWorkers,
       recovered,
+      schedulesEnabled: this.opts.schedulesEnabled,
     });
 
     this.stateHeartbeat = setInterval(() => {
@@ -134,7 +155,9 @@ export class ForgeDaemon {
     const tick = async () => {
       if (this.stopping) return;
       try {
-        // Recover stale leases while running (worker crash without daemon death)
+        if (this.opts.schedulesEnabled) {
+          scheduler.tick();
+        }
         store.recoverOrphans({ staleAfterMs: this.opts.staleJobMs });
 
         while (!this.stopping && this.active.size < this.opts.maxWorkers) {
@@ -192,12 +215,10 @@ export class ForgeDaemon {
       for (const ac of this.active.values()) {
         ac.abort();
       }
-      // Wait briefly for workers to finish or abort
       const deadline = Date.now() + 5_000;
       while (this.active.size > 0 && Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 50));
       }
-      // Requeue any still-running after abort so crash/stop preserves queue
       store.recoverOrphans({ forceAllRunning: true });
       writeDaemonState(this.opts.workspacePath, {
         pid: process.pid,
@@ -209,6 +230,8 @@ export class ForgeDaemon {
         maxWorkers: this.opts.maxWorkers,
         activeWorkers: 0,
       });
+      scheduleStore.close();
+      this.scheduleStore = null;
       store.close();
       this.store = null;
       this.opts.logger?.info("daemon stopped");
@@ -219,6 +242,8 @@ export class ForgeDaemon {
       done,
       stop,
       store,
+      schedules: scheduleStore,
+      scheduler,
       getState: () => readDaemonState(this.opts.workspacePath),
     };
   }
@@ -258,7 +283,6 @@ export class ForgeDaemon {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const aborted = ac.signal.aborted;
-      // Always requeue on failure/abort until maxAttempts (stop + crash preserve work).
       try {
         store.fail(jobId, workerId, message, true);
       } catch {

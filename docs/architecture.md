@@ -38,6 +38,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/scheduler` | Task DAG + parallel worker scheduler |
 | `src/verification` | Independent checks + browser QA |
 | `src/daemon` | Persistent job queue, workers, crash recovery |
+| `src/jobs` | Scheduled engineering analyses + schedule store |
 | `src/telemetry` | Structured logs with secret redaction |
 
 ## Persistence

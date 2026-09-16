@@ -2,6 +2,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { JobExecutor } from "./types.js";
 import { ForgeError } from "../core/types.js";
+import {
+  assertAnalysisId,
+  runAnalysis,
+  writeAnalysisArtifact,
+} from "../jobs/index.js";
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolvePromise, reject) => {
@@ -19,8 +24,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 /**
- * Built-in executors for daemon jobs (tests + lightweight CLI work).
- * `agent_task` is reserved for future orchestrator wiring.
+ * Built-in executors for daemon jobs (tests + lightweight CLI work + analyses).
  */
 export function createBuiltinExecutor(): JobExecutor {
   return async (ctx) => {
@@ -60,6 +64,28 @@ export function createBuiltinExecutor(): JobExecutor {
         writeFileSync(abs, content, "utf8");
         heartbeat();
         return { path: abs, bytes: Buffer.byteLength(content, "utf8") };
+      }
+      case "analysis": {
+        const rawId = job.payload.analysisId;
+        if (typeof rawId !== "string") {
+          throw new ForgeError(
+            "analysis job requires payload.analysisId",
+            "INVALID_JOB_PAYLOAD",
+          );
+        }
+        assertAnalysisId(rawId);
+        const report = runAnalysis(rawId, workspacePath);
+        heartbeat();
+        const artifactPath = writeAnalysisArtifact(workspacePath, report, job.id);
+        heartbeat();
+        return {
+          analysisId: report.analysisId,
+          summary: report.summary,
+          findings: report.findings.length,
+          artifactPath,
+          proposal: report.proposal,
+          metrics: report.metrics,
+        };
       }
       case "agent_task":
         throw new ForgeError(

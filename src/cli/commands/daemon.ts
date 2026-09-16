@@ -91,6 +91,7 @@ export function registerDaemon(program: Command): void {
           pollIntervalMs: config.daemon.pollIntervalMs,
           heartbeatIntervalMs: config.daemon.heartbeatIntervalMs,
           staleJobMs: config.daemon.staleJobMs,
+          schedulesEnabled: config.daemon.schedulesEnabled,
           recoverOnStart: opts.recover !== false,
           logger: rootLogger.child("daemon"),
         });

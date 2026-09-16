@@ -87,7 +87,7 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge browserqa list|run|demo`
 - Fixture: `fixtures/web-login`
 
-## v0.11 / M8 (this release)
+## v0.11 / M8 (shipped)
 
 **Persistent daemon**
 
@@ -97,8 +97,18 @@ Approval gates, hardened Docker profiles, better relevance
 - CLI: `forge daemon start|status|stop|enqueue`
 - Config: `daemon.maxWorkers`, poll/heartbeat/stale intervals
 
+## v0.12 / M9 (this release)
+
+**Background jobs**
+
+- Scheduled engineering analyses (todo, deps, security, summary, dead-code hints)
+- Durable `daemon_schedules` + daemon tick firing
+- Results as proposals/artifacts (never silent rewrites)
+- CLI: `forge jobs catalog|run|schedule|schedules|…`
+- Fixture: `fixtures/scheduled-repo`
+
 ## Later
 
-- M9 background jobs / goal mode (see milestones)
+- M10 remote execution / goal mode (see milestones)
 - Fully async orchestrator wired to PostgreSQL end-to-end
 - Hosted control plane (explicit non-goal until local loop is excellent)

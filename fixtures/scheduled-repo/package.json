@@ -1,0 +1,11 @@
+{
+  "name": "scheduled-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "left-pad": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
