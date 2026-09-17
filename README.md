@@ -31,7 +31,9 @@ Forge—not the model—owns state, permissions, budgets, routing, verification,
 | **CLI** | `forge-harness run "…"` |
 | **Telegram / Slack** | Set bot tokens, then `forge-harness gateway start` (pairing required) |
 
-Docs: [docs/gui-gateway.md](docs/gui-gateway.md) · [docs/INSTALL.md](docs/INSTALL.md)
+**Desktop product (in progress):** Forge will ship as an installable Electron app so users never open a terminal or browser. Shell choice and roadmap: [docs/desktop.md](docs/desktop.md) · [ADR](docs/adr/desktop-runtime.md). Until DESKTOP-1+, use the Web GUI/CLI above for development.
+
+Docs: [docs/gui-gateway.md](docs/gui-gateway.md) · [docs/INSTALL.md](docs/INSTALL.md) · [docs/desktop.md](docs/desktop.md)
 
 ## Why local-first
 

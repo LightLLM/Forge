@@ -29,6 +29,8 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | M20 | Forge v1 RC | [✓] | 2026-09-16 |
 | GUI-0 | Gateway API + sessions + SSE | [✓] | 2026-09-16 |
 | GUI-1–4 / GW-1–4 / UX-1 | Web GUI + Telegram/Slack + WhatsApp stub | [✓] | 2026-09-16 |
+| DESKTOP-0 | Desktop shell ADR (Electron vs Tauri) | [✓] | 2026-09-17 |
+| DESKTOP-1 | Electron shell embeds Forge GUI | [ ] | — |
 
 ---
 
@@ -221,6 +223,17 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** live soak across many repos remains manual
 - **Completion date:** 2026-09-16
 
+## DESKTOP-0 — Desktop runtime ADR
+
+- **Status:** complete
+- **Scope:** Inspect Core/Gateway/GUI/daemon/deps; choose Electron vs Tauri 2 for *this* repo; document in `docs/adr/desktop-runtime.md` and `docs/desktop.md`. No shell scaffolding.
+- **Tests:** existing suite + `tests/desktop-0-adr.test.ts`
+- **E2E evidence:** ADR records Electron decision with comparison table; GUI identified as vanilla gateway SPA (not React/Next)
+- **Limitations:** No installer yet; product still started via CLI for development
+- **Completion date:** 2026-09-17
+
 ## Next incomplete
 
-Super Build Prompt milestones M0–M20 are complete. Follow-on work: deeper KG edges, async Postgres orchestrator, hosted control plane (explicit non-goal until local loop is excellent).
+**DESKTOP-1** — Electron shell that renders the existing Forge GUI in a native window (no external browser). See [docs/desktop.md](desktop.md).
+
+Super Build Prompt milestones M0–M20 and GUI/Gateway v1.1 are complete. Hosted control plane remains an explicit non-goal until the local desktop loop is excellent.

@@ -51,6 +51,14 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 | `src/gateway` | Interaction Gateway API, sessions, SSE, channels, web GUI |
 | `src/telemetry` | Structured logs with secret redaction |
 
+## Desktop product direction
+
+Forge is intended to ship as a **cross-platform desktop application** (Windows / macOS / Linux). The Interaction Gateway web GUI is the presentation layer; it will be embedded in a native shell so users never open a browser or manage `localhost`.
+
+**DESKTOP-0 decision:** use **Electron** as the shell (not Tauri 2), because Forge Core is Node-heavy (`node:sqlite`, child processes, optional Playwright, gateway sidecar). See [adr/desktop-runtime.md](adr/desktop-runtime.md) and [desktop.md](desktop.md).
+
+Invariant: one Forge Core; CLI, Desktop, and Gateway are interfaces — do not duplicate runtime logic in the shell.
+
 ## Persistence
 
 SQLite via Node's built-in `node:sqlite` (`DatabaseSync`) stores `projects`, `tasks`, `runs`, `events`, `artifacts`, `approvals`, `sessions`, and `memories`. No native addon is required.
