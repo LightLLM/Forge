@@ -37,6 +37,17 @@ export function registerRoles(program: Command): void {
     });
 
   roles
+    .command("pipelines")
+    .description("List multi-agent role pipelines")
+    .action(async () => {
+      const { listAgentPipelines } = await import("../../agents/index.js");
+      for (const p of listAgentPipelines()) {
+        console.log(`${p.id.padEnd(10)} ${p.stages.join(" → ")}`);
+        console.log(`           ${p.description}`);
+      }
+    });
+
+  roles
     .command("match")
     .description("Preview role selection for a phase/objective")
     .argument("<objective>", "Task objective")

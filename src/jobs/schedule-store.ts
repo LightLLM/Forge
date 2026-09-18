@@ -9,6 +9,7 @@ import type {
   ScheduleStatus,
 } from "./types.js";
 import { ForgeError } from "../core/types.js";
+import { estimateCronEveryMs, nextCronOccurrence, parseCronExpression } from "./cron.js";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -19,6 +20,7 @@ function rowToSchedule(row: {
   name: string;
   analysis_id: string;
   every_ms: number;
+  cron_expr: string | null;
   status: string;
   payload: string;
   last_run_at: string | null;
@@ -33,6 +35,7 @@ function rowToSchedule(row: {
     name: row.name,
     analysisId: row.analysis_id as AnalysisId,
     everyMs: row.every_ms,
+    cronExpr: row.cron_expr,
     status: row.status as ScheduleStatus,
     payload: JSON.parse(row.payload) as Record<string, unknown>,
     lastRunAt: row.last_run_at,
@@ -63,6 +66,7 @@ export class ScheduleStore {
         name TEXT NOT NULL,
         analysis_id TEXT NOT NULL,
         every_ms INTEGER NOT NULL,
+        cron_expr TEXT,
         status TEXT NOT NULL,
         payload TEXT NOT NULL,
         last_run_at TEXT,
@@ -75,6 +79,13 @@ export class ScheduleStore {
       CREATE INDEX IF NOT EXISTS idx_daemon_schedules_next ON daemon_schedules(next_run_at);
       CREATE INDEX IF NOT EXISTS idx_daemon_schedules_status ON daemon_schedules(status);
     `);
+    // Migrate older DBs created before cron_expr existed.
+    const cols = this.db
+      .prepare(`PRAGMA table_info(daemon_schedules)`)
+      .all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === "cron_expr")) {
+      this.db.exec(`ALTER TABLE daemon_schedules ADD COLUMN cron_expr TEXT`);
+    }
   }
 
   close(): void {
@@ -82,19 +93,31 @@ export class ScheduleStore {
   }
 
   create(input: CreateScheduleInput): ScheduleRecord {
-    if (input.everyMs < 50) {
+    let everyMs = input.everyMs;
+    let cronExpr: string | null = input.cronExpr?.trim() || null;
+    if (cronExpr) {
+      parseCronExpression(cronExpr);
+      if (!everyMs || everyMs < 50) {
+        everyMs = estimateCronEveryMs(cronExpr);
+      }
+    }
+    if (everyMs < 50) {
       throw new ForgeError("everyMs must be >= 50", "INVALID_SCHEDULE");
     }
     const ts = nowIso();
+    const nextRunAt =
+      input.nextRunAt ??
+      (cronExpr ? nextCronOccurrence(cronExpr, new Date()).toISOString() : ts);
     const record: ScheduleRecord = {
       id: randomUUID(),
       name: input.name,
       analysisId: input.analysisId,
-      everyMs: input.everyMs,
+      everyMs,
+      cronExpr,
       status: input.status ?? "active",
       payload: input.payload ?? {},
       lastRunAt: null,
-      nextRunAt: input.nextRunAt ?? ts,
+      nextRunAt,
       lastJobId: null,
       runCount: 0,
       createdAt: ts,
@@ -103,15 +126,16 @@ export class ScheduleStore {
     this.db
       .prepare(
         `INSERT INTO daemon_schedules (
-          id, name, analysis_id, every_ms, status, payload,
+          id, name, analysis_id, every_ms, cron_expr, status, payload,
           last_run_at, next_run_at, last_job_id, run_count, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         record.id,
         record.name,
         record.analysisId,
         record.everyMs,
+        record.cronExpr,
         record.status,
         JSON.stringify(record.payload),
         null,
@@ -171,7 +195,7 @@ export class ScheduleStore {
   }
 
   /**
-   * Mark schedule as fired: bump next_run_at and record job id.
+   * Mark schedule as fired: bump next_run_at (cron or interval) and record job id.
    */
   markFired(id: string, jobId: string, firedAt = new Date()): ScheduleRecord {
     const current = this.get(id);
@@ -179,7 +203,9 @@ export class ScheduleStore {
       throw new ForgeError(`Schedule not found: ${id}`, "SCHEDULE_MISSING");
     }
     const ts = firedAt.toISOString();
-    const next = new Date(firedAt.getTime() + current.everyMs).toISOString();
+    const next = current.cronExpr
+      ? nextCronOccurrence(current.cronExpr, firedAt).toISOString()
+      : new Date(firedAt.getTime() + current.everyMs).toISOString();
     this.db
       .prepare(
         `UPDATE daemon_schedules SET

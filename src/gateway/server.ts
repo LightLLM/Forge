@@ -29,6 +29,21 @@ import {
   runAllowedCommand,
 } from "../tools/repository.js";
 import { z } from "zod";
+import {
+  ANALYSIS_CATALOG,
+  JobScheduler,
+  ScheduleStore,
+  assertAnalysisId,
+  runAnalysis,
+  writeAnalysisArtifact,
+  type AnalysisId,
+} from "../jobs/index.js";
+import { JobStore } from "../daemon/job-store.js";
+import {
+  listAgentPipelines,
+  listAgentRoles,
+} from "../agents/index.js";
+import { getDaemonStatus } from "../daemon/daemon.js";
 
 export interface GatewayServerOptions {
   store: PersistenceStore;
@@ -567,6 +582,172 @@ async function handleRequest(
         error: err instanceof Error ? err.message : String(err),
       });
     }
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/api/jobs/catalog") {
+    sendJson(res, 200, { catalog: ANALYSIS_CATALOG });
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/api/jobs/schedules") {
+    const schedules = new ScheduleStore(config.dbPath);
+    schedules.initialize();
+    try {
+      sendJson(res, 200, { schedules: schedules.list() });
+    } finally {
+      schedules.close();
+    }
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/api/jobs/schedules") {
+    const body = await readJson(req);
+    const parsed = z
+      .object({
+        analysisId: z.string().min(1),
+        name: z.string().optional(),
+        everyMs: z.number().int().positive().optional(),
+        cron: z.string().optional(),
+        paused: z.boolean().optional(),
+      })
+      .safeParse(body);
+    if (!parsed.success) {
+      sendJson(res, 400, { error: parsed.error.flatten() });
+      return;
+    }
+    try {
+      assertAnalysisId(parsed.data.analysisId);
+      const analysisId = parsed.data.analysisId as AnalysisId;
+      const def = ANALYSIS_CATALOG.find((a) => a.id === analysisId)!;
+      const schedules = new ScheduleStore(config.dbPath);
+      schedules.initialize();
+      try {
+        const schedule = schedules.create({
+          name: parsed.data.name ?? def.name,
+          analysisId,
+          everyMs: parsed.data.everyMs ?? def.defaultEveryMs,
+          cronExpr: parsed.data.cron ?? null,
+          status: parsed.data.paused ? "paused" : "active",
+        });
+        sendJson(res, 201, { schedule });
+      } finally {
+        schedules.close();
+      }
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const scheduleAction = url.pathname.match(
+    /^\/api\/jobs\/schedules\/([^/]+)\/(pause|resume)$/,
+  );
+  if (method === "POST" && scheduleAction) {
+    const id = decodeURIComponent(scheduleAction[1]!);
+    const action = scheduleAction[2] as "pause" | "resume";
+    const schedules = new ScheduleStore(config.dbPath);
+    schedules.initialize();
+    try {
+      const updated = schedules.setStatus(
+        id,
+        action === "pause" ? "paused" : "active",
+      );
+      sendJson(res, 200, { schedule: updated });
+    } catch (err) {
+      sendJson(res, 404, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      schedules.close();
+    }
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/api/jobs/run") {
+    const body = await readJson(req);
+    const parsed = z
+      .object({
+        analysisId: z.string().min(1),
+        enqueue: z.boolean().optional(),
+      })
+      .safeParse(body);
+    if (!parsed.success) {
+      sendJson(res, 400, { error: parsed.error.flatten() });
+      return;
+    }
+    try {
+      assertAnalysisId(parsed.data.analysisId);
+      const analysisId = parsed.data.analysisId as AnalysisId;
+      if (parsed.data.enqueue) {
+        const jobs = new JobStore(config.dbPath);
+        jobs.initialize();
+        const schedules = new ScheduleStore(config.dbPath);
+        schedules.initialize();
+        try {
+          const scheduler = new JobScheduler({
+            scheduleStore: schedules,
+            jobStore: jobs,
+          });
+          const job = scheduler.enqueueNow(analysisId);
+          sendJson(res, 202, {
+            job,
+            hint: "Start daemon to execute: forge daemon start",
+          });
+        } finally {
+          jobs.close();
+          schedules.close();
+        }
+        return;
+      }
+      const report = runAnalysis(analysisId, config.workspacePath);
+      const artifact = writeAnalysisArtifact(config.workspacePath, report);
+      sendJson(res, 200, { report, artifact });
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/api/jobs/daemon") {
+    const status = getDaemonStatus(config.workspacePath);
+    sendJson(res, 200, {
+      daemon: {
+        running: status.alive,
+        alive: status.alive,
+        state: status.state,
+        counts: status.counts ?? null,
+        maxWorkers: status.state?.maxWorkers ?? null,
+        activeWorkers: status.state?.activeWorkers ?? null,
+      },
+    });
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/api/agents/roles") {
+    sendJson(res, 200, {
+      roles: listAgentRoles().map((r) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        allowedTools: r.allowedTools,
+        permissions: r.permissions,
+        modelPolicy: r.modelPolicy,
+      })),
+      agentsEnabled: config.agents.enabled,
+    });
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/api/agents/pipelines") {
+    sendJson(res, 200, {
+      pipelines: listAgentPipelines(),
+      note: "BUILD uses phase roles sequentially; Goal mode runs DAG nodes in parallel workers. Hermes-style nested delegate_task is not enabled — keep policy auditable.",
+    });
     return;
   }
 

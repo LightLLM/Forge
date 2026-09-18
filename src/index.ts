@@ -84,6 +84,9 @@ export {
   getAgentRole,
   filterToolsForRole,
   BUILTIN_ROLES,
+  listAgentPipelines,
+  resolvePipeline,
+  AGENT_PIPELINES,
 } from "./agents/index.js";
 export {
   ForgeDaemon,
@@ -111,6 +114,8 @@ export {
   ScheduleStore,
   JobScheduler,
   assertAnalysisId,
+  parseCronExpression,
+  nextCronOccurrence,
 } from "./jobs/index.js";
 export type {
   AnalysisId,

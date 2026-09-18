@@ -14,3 +14,10 @@ export type {
   RoleBudgets,
   RoleModelPolicy,
 } from "./roles.js";
+export {
+  AGENT_PIPELINES,
+  listAgentPipelines,
+  resolvePipeline,
+  roleForPipelineStage,
+} from "./pipeline.js";
+export type { AgentPipelineId, PipelineStage } from "./pipeline.js";

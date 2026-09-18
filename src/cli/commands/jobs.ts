@@ -90,6 +90,10 @@ export function registerJobs(program: Command): void {
       "Interval milliseconds",
       (v: string) => Number(v),
     )
+    .option(
+      "--cron <expr>",
+      '5-field UTC cron (e.g. "0 */6 * * *" every 6 hours)',
+    )
     .option("--paused", "Create schedule paused")
     .action(
       (
@@ -98,6 +102,7 @@ export function registerJobs(program: Command): void {
           workspace?: string;
           name?: string;
           every?: number;
+          cron?: string;
           paused?: boolean;
         },
       ) => {
@@ -118,11 +123,16 @@ export function registerJobs(program: Command): void {
           name: opts.name ?? def.name,
           analysisId,
           everyMs,
+          cronExpr: opts.cron ?? null,
           status: opts.paused ? "paused" : "active",
         });
         store.close();
         console.log(
-          `Scheduled ${schedule.id} analysis=${schedule.analysisId} everyMs=${schedule.everyMs} next=${schedule.nextRunAt}`,
+          `Scheduled ${schedule.id} analysis=${schedule.analysisId}` +
+            (schedule.cronExpr
+              ? ` cron="${schedule.cronExpr}"`
+              : ` everyMs=${schedule.everyMs}`) +
+            ` next=${schedule.nextRunAt}`,
         );
       },
     );
@@ -145,7 +155,9 @@ export function registerJobs(program: Command): void {
       }
       for (const s of list) {
         console.log(
-          `${s.id.slice(0, 8)}… ${s.status.padEnd(8)} ${s.analysisId.padEnd(18)} every=${s.everyMs}ms runs=${s.runCount} next=${s.nextRunAt}`,
+          `${s.id.slice(0, 8)}… ${s.status.padEnd(8)} ${s.analysisId.padEnd(18)} ` +
+            (s.cronExpr ? `cron="${s.cronExpr}"` : `every=${s.everyMs}ms`) +
+            ` runs=${s.runCount} next=${s.nextRunAt}`,
         );
       }
     });

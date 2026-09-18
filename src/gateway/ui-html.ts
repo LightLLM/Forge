@@ -431,7 +431,8 @@ td, th { text-align: left; padding: 0.5rem 0.35rem; border-bottom: 1px solid var
         <button data-view="sessions">Sessions</button>
         <button data-view="terminal">Terminal</button>
         <button data-view="traces">Eval &amp; Traces</button>
-        <button data-view="tasks">Tasks</button>
+        <button data-view="tasks">Jobs</button>
+        <button data-view="agents">Agents</button>
         <button data-view="approvals">Approvals</button>
         <button data-view="pairings">Pairings</button>
         <button data-view="memory">Memory</button>
@@ -510,6 +511,7 @@ td, th { text-align: left; padding: 0.5rem 0.35rem; border-bottom: 1px solid var
       </div>
       <div class="view" id="view-traces"></div>
       <div class="view" id="view-tasks"></div>
+      <div class="view" id="view-agents"></div>
       <div class="view" id="view-approvals"></div>
       <div class="view" id="view-pairings"></div>
       <div class="view" id="view-memory"></div>
@@ -1110,7 +1112,81 @@ async function loadView(name) {
     const data = await api("/api/memory");
     el.innerHTML = "<h3>Memory</h3><pre>"+escapeHtml(JSON.stringify(data.memories||[],null,2).slice(0,4000))+"</pre>";
   } else if (name === "tasks") {
-    el.innerHTML = "<h3>Tasks</h3><p>Active session task updates appear under Live activity.</p>";
+    const [catalog, schedules, daemon] = await Promise.all([
+      api("/api/jobs/catalog"),
+      api("/api/jobs/schedules"),
+      api("/api/jobs/daemon").catch(() => ({ daemon: null })),
+    ]);
+    const d = daemon.daemon;
+    el.innerHTML =
+      "<h3>Jobs &amp; schedules</h3>" +
+      "<p class='muted'>Repetitive engineering analyses via the Forge daemon. Interval or 5-field UTC cron. Analyses propose only — never silent rewrites.</p>" +
+      "<p class='muted'>Daemon: " + (d && d.running ? ("running · workers " + (d.activeWorkers ?? "?") + "/" + (d.maxWorkers ?? "?")) : "stopped — run <code>forge daemon start</code>") + "</p>" +
+      "<h3 style='font-size:1.05rem'>Catalog</h3><table><tr><th>Id</th><th>Name</th><th>Default</th></tr>" +
+      (catalog.catalog||[]).map(c => "<tr><td><code>"+escapeHtml(c.id)+"</code></td><td>"+escapeHtml(c.name)+"</td><td>"+Math.round((c.defaultEveryMs||0)/3600000)+"h</td></tr>").join("") +
+      "</table>" +
+      "<div class='actions' style='margin:0.75rem 0'><label>Analysis <select id='jobAnalysis'></select></label> " +
+      "<label>Cron <input id='jobCron' placeholder='0 */6 * * *' style='width:9rem'/></label> " +
+      "<button type='button' class='ok' id='jobSchedule'>Schedule</button> " +
+      "<button type='button' id='jobRunNow'>Run now</button></div>" +
+      "<h3 style='font-size:1.05rem'>Schedules</h3><table><tr><th>Status</th><th>Analysis</th><th>When</th><th>Runs</th><th>Next</th><th></th></tr>" +
+      ((schedules.schedules||[]).map(s =>
+        "<tr><td>"+s.status+"</td><td>"+escapeHtml(s.analysisId)+"</td><td>"+(s.cronExpr?("<code>"+escapeHtml(s.cronExpr)+"</code>"):(s.everyMs+"ms"))+"</td><td>"+s.runCount+"</td><td>"+escapeHtml((s.nextRunAt||"").slice(0,19))+"</td><td>" +
+        (s.status==="active"
+          ? "<button type='button' data-pause='"+s.id+"'>Pause</button>"
+          : "<button type='button' data-resume='"+s.id+"'>Resume</button>") +
+        "</td></tr>"
+      ).join("") || "<tr><td colspan='6'>No schedules yet.</td></tr>") +
+      "</table>";
+    const sel = el.querySelector("#jobAnalysis");
+    (catalog.catalog||[]).forEach(c => {
+      const o = document.createElement("option");
+      o.value = c.id; o.textContent = c.id;
+      sel.appendChild(o);
+    });
+    el.querySelector("#jobSchedule").onclick = async () => {
+      const analysisId = sel.value;
+      const cron = (el.querySelector("#jobCron").value || "").trim();
+      await api("/api/jobs/schedules", {
+        method: "POST",
+        body: JSON.stringify({ analysisId, cron: cron || undefined }),
+      });
+      loadView("tasks");
+    };
+    el.querySelector("#jobRunNow").onclick = async () => {
+      const analysisId = sel.value;
+      const res = await api("/api/jobs/run", {
+        method: "POST",
+        body: JSON.stringify({ analysisId }),
+        timeoutMs: 120_000,
+      });
+      alert((res.report && res.report.summary) || "done");
+    };
+    el.querySelectorAll("[data-pause]").forEach(b => b.onclick = async () => {
+      await api("/api/jobs/schedules/"+b.dataset.pause+"/pause", { method:"POST", body:"{}" });
+      loadView("tasks");
+    });
+    el.querySelectorAll("[data-resume]").forEach(b => b.onclick = async () => {
+      await api("/api/jobs/schedules/"+b.dataset.resume+"/resume", { method:"POST", body:"{}" });
+      loadView("tasks");
+    });
+  } else if (name === "agents") {
+    const [roles, pipes] = await Promise.all([
+      api("/api/agents/roles"),
+      api("/api/agents/pipelines"),
+    ]);
+    el.innerHTML =
+      "<h3>Multi-agent setup</h3>" +
+      "<p class='muted'>Forge uses specialized roles (not nested Hermes-style subagents). BUILD picks a role by phase; Goal mode runs a task DAG with parallel workers. Agents enabled: <code>"+String(roles.agentsEnabled)+"</code>.</p>" +
+      "<h3 style='font-size:1.05rem'>Pipelines</h3><ul>" +
+      (pipes.pipelines||[]).map(p => "<li><strong>"+escapeHtml(p.id)+"</strong> — "+escapeHtml(p.stages.join(" → "))+"<br/><span class='muted'>"+escapeHtml(p.description)+"</span></li>").join("") +
+      "</ul>" +
+      (pipes.note ? "<p class='muted'>"+escapeHtml(pipes.note)+"</p>" : "") +
+      "<h3 style='font-size:1.05rem'>Roles</h3><table><tr><th>Id</th><th>Writes</th><th>Exec</th><th>Tools</th><th>Description</th></tr>" +
+      (roles.roles||[]).map(r =>
+        "<tr><td><code>"+escapeHtml(r.id)+"</code></td><td>"+r.permissions.allowWrites+"</td><td>"+r.permissions.allowExecute+"</td><td style='font-size:0.75rem'>"+escapeHtml((r.allowedTools||[]).slice(0,6).join(", "))+"…</td><td>"+escapeHtml(r.description)+"</td></tr>"
+      ).join("") +
+      "</table>";
   }
 }
 

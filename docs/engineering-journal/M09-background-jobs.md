@@ -19,6 +19,7 @@ Scheduled fixture job executes and records results (findings + artifact path on 
 
 ## Remaining debt
 
-- Cron expressions (interval-only today)
+- ~~Cron expressions (interval-only today)~~ — 5-field UTC cron via `--cron` / `cronExpr`
 - Wire nightly test / coverage analyses to verification engine
 - Optional enqueue of follow-up `forge run` tasks from proposals (still human-gated)
+- Daemon `agent_task` job kind still unwired (use `forge run` / Goal mode)

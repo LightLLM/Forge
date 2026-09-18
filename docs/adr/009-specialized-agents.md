@@ -17,4 +17,4 @@ Different engineering jobs need different tool surfaces and instructions without
 
 ## Consequences
 
-Implement/repair/review paths get distinct authorities. Future multi-agent pipelines can reuse the same role definitions.
+Implement/repair/review paths get distinct authorities. Multi-agent **pipelines** (`build`, `debug`, `design`, `full`) document ordered role sequences; Goal mode still runs DAG nodes with parallel workers. Nested Hermes-style `delegate_task` is intentionally not enabled — keep tool authority auditable.

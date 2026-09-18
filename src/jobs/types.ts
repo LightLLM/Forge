@@ -43,6 +43,8 @@ export interface ScheduleRecord {
   name: string;
   analysisId: AnalysisId;
   everyMs: number;
+  /** Optional 5-field cron (UTC). When set, next runs use cron instead of everyMs. */
+  cronExpr: string | null;
   status: ScheduleStatus;
   payload: Record<string, unknown>;
   lastRunAt: string | null;
@@ -57,6 +59,7 @@ export interface CreateScheduleInput {
   name: string;
   analysisId: AnalysisId;
   everyMs: number;
+  cronExpr?: string | null;
   status?: ScheduleStatus;
   payload?: Record<string, unknown>;
   /** If set, first run at this ISO time; otherwise now. */
