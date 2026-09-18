@@ -31,6 +31,9 @@
     "test:watch": "vitest",
     "dev": "tsx src/cli/index.ts",
     "forge": "tsx src/cli/index.ts",
+    "desktop:dev": "pnpm --dir desktop install && pnpm build && pnpm --dir desktop dev",
+    "desktop:build": "pnpm build && pnpm --dir desktop build",
+    "desktop:test": "vitest run tests/desktop-0-adr.test.ts tests/desktop-1-shell.test.ts",
     "prepare": "npm run build",
     "prepack": "npm run build"
   },

@@ -31,7 +31,13 @@ Forge—not the model—owns state, permissions, budgets, routing, verification,
 | **CLI** | `forge-harness run "…"` |
 | **Telegram / Slack** | Set bot tokens, then `forge-harness gateway start` (pairing required) |
 
-**Desktop product (in progress):** Forge will ship as an installable Electron app so users never open a terminal or browser. Shell choice and roadmap: [docs/desktop.md](docs/desktop.md) · [ADR](docs/adr/desktop-runtime.md). Until DESKTOP-1+, use the Web GUI/CLI above for development.
+**Desktop (DESKTOP-1):** Electron shell embeds the Forge GUI — no external browser.
+
+```bash
+pnpm desktop:dev
+```
+
+Shell choice and roadmap: [docs/desktop.md](docs/desktop.md) · [ADR](docs/adr/desktop-runtime.md). Installers arrive in DESKTOP-6+.
 
 Docs: [docs/gui-gateway.md](docs/gui-gateway.md) · [docs/INSTALL.md](docs/INSTALL.md) · [docs/desktop.md](docs/desktop.md)
 

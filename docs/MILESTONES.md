@@ -30,7 +30,7 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | GUI-0 | Gateway API + sessions + SSE | [✓] | 2026-09-16 |
 | GUI-1–4 / GW-1–4 / UX-1 | Web GUI + Telegram/Slack + WhatsApp stub | [✓] | 2026-09-16 |
 | DESKTOP-0 | Desktop shell ADR (Electron vs Tauri) | [✓] | 2026-09-17 |
-| DESKTOP-1 | Electron shell embeds Forge GUI | [ ] | — |
+| DESKTOP-1 | Electron shell embeds Forge GUI | [✓] | 2026-09-17 |
 
 ---
 
@@ -232,8 +232,17 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Limitations:** No installer yet; product still started via CLI for development
 - **Completion date:** 2026-09-17
 
+## DESKTOP-1 — Electron shell embeds Forge GUI
+
+- **Status:** complete
+- **Scope:** `desktop/` Electron app; loading splash; spawn Gateway sidecar on `127.0.0.1` ephemeral port; load existing vanilla GUI in `BrowserWindow`; narrow preload; quit kills sidecar. Scripts: `pnpm desktop:dev|test|build`.
+- **Tests:** existing suite + `tests/desktop-1-shell.test.ts`
+- **E2E evidence:** sidecar helpers pick loopback port / wait for `/api/system/status`; package declares Electron main; GUI never requires an external browser for primary UI
+- **Limitations:** No installer yet; crash auto-restart / tray / SecretStore / native project picker are DESKTOP-2+; `desktop:build` does not produce setup.exe yet (DESKTOP-6)
+- **Completion date:** 2026-09-17
+
 ## Next incomplete
 
-**DESKTOP-1** — Electron shell that renders the existing Forge GUI in a native window (no external browser). See [docs/desktop.md](desktop.md).
+**DESKTOP-2** — Harden Core sidecar lifecycle (monitor, safe restart, durable crash handling). See [docs/desktop.md](desktop.md).
 
 Super Build Prompt milestones M0–M20 and GUI/Gateway v1.1 are complete. Hosted control plane remains an explicit non-goal until the local desktop loop is excellent.

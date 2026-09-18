@@ -27,11 +27,10 @@ describe("DESKTOP-0 desktop runtime ADR", () => {
     expect(adr).toMatch(/ui-html/);
   });
 
-  it("does not claim DESKTOP-1 scaffolding already shipped", () => {
+  it("records Electron choice and DESKTOP milestone table", () => {
     const desktop = readFileSync(desktopDoc, "utf8");
     expect(desktop).toMatch(/DESKTOP-0/);
     expect(desktop).toMatch(/Electron/);
-    // Milestone table marks DESKTOP-1 incomplete
-    expect(desktop).toMatch(/DESKTOP-1.*\[\s*\]/s);
+    expect(desktop).toMatch(/DESKTOP-1.*\[✓\]/s);
   });
 });
