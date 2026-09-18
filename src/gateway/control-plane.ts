@@ -9,12 +9,19 @@ import { rootLogger } from "../telemetry/logger.js";
 import type { ChatMode, GatewayMessage, InteractionSession } from "./types.js";
 import type { GatewayEventBus } from "./events.js";
 import type { InteractionSessionStore } from "./sessions.js";
+import type { TraceStore } from "./trace-store.js";
+import {
+  formatAttachmentsForPrompt,
+  intakeAttachments,
+  type IncomingAttachment,
+} from "./attachments.js";
 
 export interface ControlPlaneDeps {
   store: PersistenceStore;
   sessions: InteractionSessionStore;
   events: GatewayEventBus;
   config: ResolvedConfig;
+  traces?: TraceStore;
   fakeProvider?: FakeModelProvider;
 }
 
@@ -32,25 +39,32 @@ export class GatewayControlPlane {
     text: string;
     mode?: ChatMode;
     externalUserId?: string;
+    attachments?: IncomingAttachment[];
   }): Promise<{ message: GatewayMessage; taskId?: string }> {
     const mode = input.mode ?? input.session.chatMode;
+    const attachmentMeta =
+      input.attachments && input.attachments.length > 0
+        ? intakeAttachments(input.session.workspacePath, input.attachments)
+        : [];
+    const text = formatAttachmentsForPrompt(input.text || "", attachmentMeta);
     this.deps.sessions.appendMessage({
       sessionId: input.session.id,
       channel: input.session.channel,
       role: "user",
-      content: { type: "text", text: input.text },
+      content: { type: "text", text },
+      attachments: attachmentMeta,
       mode,
       externalUserId: input.externalUserId,
       externalConversationId: input.session.externalConversationId ?? undefined,
     });
     this.deps.events.publish(
       "message.created",
-      { role: "user", text: input.text, mode },
+      { role: "user", text, mode },
       { sessionId: input.session.id, channel: input.session.channel },
     );
 
-    if (input.text.trim().startsWith("/")) {
-      const reply = await this.handleCommand(input.session, input.text.trim());
+    if (text.trim().startsWith("/")) {
+      const reply = await this.handleCommand(input.session, text.trim());
       const assistant = this.deps.sessions.appendMessage({
         sessionId: input.session.id,
         channel: input.session.channel,
@@ -66,7 +80,28 @@ export class GatewayControlPlane {
     }
 
     if (mode === "ask" || mode === "plan" || mode === "review") {
-      const reply = this.readOnlyReply(mode, input.text);
+      let reply: string;
+      try {
+        reply = await this.readOnlyModelReply(mode, text, input.session.id);
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        this.deps.traces?.appendLog({
+          level: "error",
+          scope: "gateway:chat",
+          message: detail,
+          fields: { sessionId: input.session.id, mode },
+        });
+        this.deps.events.publish(
+          "log.error",
+          { message: detail, scope: "gateway:chat" },
+          { sessionId: input.session.id },
+        );
+        reply = [
+          this.readOnlyReply(mode, text),
+          "",
+          `_(Model call failed: ${detail})_`,
+        ].join("\n");
+      }
       const assistant = this.deps.sessions.appendMessage({
         sessionId: input.session.id,
         channel: input.session.channel,
@@ -82,7 +117,24 @@ export class GatewayControlPlane {
       return { message: assistant };
     }
 
-    const objective = mode === "debug" ? `[DEBUG] ${input.text}` : input.text;
+    const modelGap = this.modelConfigGap(input.session.routingMode);
+    if (modelGap) {
+      const assistant = this.deps.sessions.appendMessage({
+        sessionId: input.session.id,
+        channel: input.session.channel,
+        role: "assistant",
+        content: { type: "markdown", text: modelGap },
+        mode,
+      });
+      this.deps.events.publish(
+        "message.created",
+        { role: "assistant", text: modelGap, mode },
+        { sessionId: input.session.id },
+      );
+      return { message: assistant };
+    }
+
+    const objective = mode === "debug" ? `[DEBUG] ${text}` : text;
     const ack = this.deps.sessions.appendMessage({
       sessionId: input.session.id,
       channel: input.session.channel,
@@ -103,6 +155,39 @@ export class GatewayControlPlane {
     return { message: ack };
   }
 
+  /** Clear, immediate guidance when BUILD would otherwise hang on "Analyzing repository…". */
+  private modelConfigGap(routingMode: InteractionSession["routingMode"]): string | null {
+    const local = (this.deps.config.local.model || "").trim();
+    const cloud = (this.deps.config.cloud.model || "").trim();
+    const hasKey = Boolean(this.deps.config.openRouterApiKey);
+    if (routingMode === "local-only") {
+      if (!local) {
+        return [
+          "**Cannot start BUILD** — no local model configured.",
+          "",
+          "Set `OLLAMA_MODEL` in `.forge/desktop.env` or pull a model in Ollama and re-run onboarding.",
+        ].join("\n");
+      }
+      return null;
+    }
+    if (!local && !cloud) {
+      return [
+        "**Cannot start BUILD** — no model name configured.",
+        "",
+        hasKey
+          ? "OpenRouter key is present, but `OPENROUTER_MODEL` is empty. Add it to `.forge/desktop.env`, for example:"
+          : "Set a local model (`OLLAMA_MODEL`) or add an OpenRouter key **and** `OPENROUTER_MODEL`.",
+        hasKey ? "```" : "",
+        hasKey ? "OPENROUTER_MODEL=openai/gpt-4o-mini" : "",
+        hasKey ? "```" : "",
+        "",
+        "Then restart Forge (or start a new session) and try BUILD again.",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+    return null;
+  }
   private async runObjective(
     sessionId: string,
     objective: string,
@@ -167,21 +252,29 @@ export class GatewayControlPlane {
       sessions.updateSession(sessionId, { activeTaskId: report.task.id });
       const channel = sessions.getSession(sessionId)?.channel ?? "web";
 
+      this.recordBuildTraces(sessionId, report.task.id);
+
       if (report.task.status === "COMPLETED") {
         events.publish(
           "task.completed",
           { taskId: report.task.id, summary: report.summary },
           { sessionId, taskId: report.task.id },
         );
+        const doneText = `Task \`${report.task.id.slice(0, 8)}\` **complete**.\n\n${report.summary}`;
         sessions.appendMessage({
           sessionId,
           channel,
           role: "assistant",
           content: {
             type: "markdown",
-            text: `Task \`${report.task.id.slice(0, 8)}\` **complete**.\n\n${report.summary}`,
+            text: doneText,
           },
         });
+        events.publish(
+          "message.created",
+          { role: "assistant", text: doneText },
+          { sessionId },
+        );
       } else {
         events.publish(
           "task.failed",
@@ -192,17 +285,23 @@ export class GatewayControlPlane {
           },
           { sessionId, taskId: report.task.id },
         );
+        const failText = `Task \`${report.task.id.slice(0, 8)}\` ended **${report.task.status}**.${
+          report.task.error ? `\n\n${report.task.error}` : ""
+        }`;
         sessions.appendMessage({
           sessionId,
           channel,
           role: "assistant",
           content: {
             type: "markdown",
-            text: `Task \`${report.task.id.slice(0, 8)}\` ended **${report.task.status}**.${
-              report.task.error ? `\n\n${report.task.error}` : ""
-            }`,
+            text: failText,
           },
         });
+        events.publish(
+          "message.created",
+          { role: "assistant", text: failText },
+          { sessionId },
+        );
       }
       events.publish(
         "verification.completed",
@@ -211,16 +310,79 @@ export class GatewayControlPlane {
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      this.deps.traces?.appendLog({
+        level: "error",
+        scope: "gateway:build",
+        message,
+        fields: { sessionId },
+      });
+      this.deps.events.publish(
+        "log.error",
+        { message, scope: "gateway:build" },
+        { sessionId },
+      );
       events.publish("task.failed", { error: message }, { sessionId });
       const channel = sessions.getSession(sessionId)?.channel ?? "web";
+      const failText = `Task failed: ${message}`;
       sessions.appendMessage({
         sessionId,
         channel,
         role: "assistant",
-        content: { type: "markdown", text: `Task failed: ${message}` },
+        content: { type: "markdown", text: failText },
       });
+      events.publish(
+        "message.created",
+        { role: "assistant", text: failText },
+        { sessionId },
+      );
     } finally {
       this.running.delete(runKey);
+    }
+  }
+
+  private recordBuildTraces(sessionId: string, taskId: string): void {
+    const traces = this.deps.traces;
+    if (!traces) return;
+    try {
+      const runs = this.deps.store.listRuns(taskId);
+      for (const run of runs) {
+        const record = traces.recordTrace({
+          sessionId,
+          taskId,
+          source: "build",
+          provider: run.provider,
+          model: run.model,
+          promptTokens: run.promptTokens,
+          completionTokens: run.completionTokens,
+          estimatedCostUsd: run.estimatedCostUsd,
+          latencyMs:
+            run.endedAt && run.startedAt
+              ? Math.max(
+                  0,
+                  new Date(run.endedAt).getTime() -
+                    new Date(run.startedAt).getTime(),
+                )
+              : null,
+          status: run.status === "succeeded" ? "ok" : "error",
+          error: run.error,
+        });
+        this.deps.events.publish(
+          "model.usage",
+          {
+            provider: record.provider,
+            model: record.model,
+            promptTokens: record.promptTokens,
+            completionTokens: record.completionTokens,
+            estimatedCostUsd: record.estimatedCostUsd,
+            status: record.status,
+          },
+          { sessionId, taskId },
+        );
+      }
+    } catch (err) {
+      rootLogger.warn("failed to record build traces", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -233,6 +395,196 @@ export class GatewayControlPlane {
     if (this.running.size === 0) return false;
     this.cancelAll();
     return true;
+  }
+
+  private systemPromptForMode(mode: ChatMode): string {
+    if (mode === "ask") {
+      return [
+        "You are Forge, a local-first software engineering assistant.",
+        "ASK mode: answer questions helpfully. Do not claim to have edited files.",
+        "Be concise and practical.",
+      ].join(" ");
+    }
+    if (mode === "plan") {
+      return [
+        "You are Forge in PLAN mode.",
+        "Produce a concrete engineering plan with steps, files, and verification.",
+        "Do not claim to have modified the repository.",
+      ].join(" ");
+    }
+    return [
+      "You are Forge in REVIEW mode.",
+      "Review the user's focus area. Point out risks and suggested fixes.",
+      "Do not claim to have modified files.",
+    ].join(" ");
+  }
+
+  /**
+   * ASK/PLAN/REVIEW — real model answer, no write tools.
+   * Prefer healthy local Ollama first; fall back to OpenRouter; retry the other on failure.
+   */
+  private async readOnlyModelReply(
+    mode: ChatMode,
+    text: string,
+    sessionId: string,
+  ): Promise<string> {
+    const { config, fakeProvider, traces, events } = this.deps;
+    const system = this.systemPromptForMode(mode);
+    const messages = [
+      { role: "system" as const, content: system },
+      { role: "user" as const, content: text },
+    ];
+
+    if (fakeProvider && (config.local.model === "fake-model" || !config.local.model)) {
+      const t0 = Date.now();
+      const res = await fakeProvider.generate({
+        messages,
+        tools: [],
+        model: "fake-model",
+        maxTokens: 1024,
+      });
+      traces?.recordTrace({
+        sessionId,
+        taskId: null,
+        source: "chat",
+        provider: "fake",
+        model: "fake-model",
+        promptTokens: res.usage.promptTokens,
+        completionTokens: res.usage.completionTokens,
+        estimatedCostUsd: res.usage.estimatedCostUsd,
+        latencyMs: Date.now() - t0,
+        status: "ok",
+        error: null,
+      });
+      const body = (res.content ?? "").trim() || "(empty model response)";
+      return `**${mode.toUpperCase()} mode** — no repository mutations.\n\n${body}`;
+    }
+
+    const ollama = new OllamaProvider({
+      baseUrl: config.ollamaBaseUrl,
+      timeoutMs: 600_000,
+    });
+    const openrouter = config.openRouterApiKey
+      ? new OpenRouterProvider({ apiKey: config.openRouterApiKey, timeoutMs: 180_000 })
+      : null;
+
+    const localModel = (config.local.model || "").trim();
+    const cloudModel = (config.cloud.model || "").trim();
+    const localPing = localModel ? await ollama.ping?.() : { ok: false, detail: "unset" };
+    const localOk = Boolean(localModel && localPing?.ok);
+    const cloudOk = Boolean(openrouter && cloudModel && config.openRouterApiKey);
+
+    type Candidate = {
+      provider: OllamaProvider | OpenRouterProvider;
+      model: string;
+      label: string;
+      providerKind: string;
+    };
+    const candidates: Candidate[] = [];
+
+    // Always try a healthy local model first for chat (even in cloud-allowed).
+    if (localOk) {
+      candidates.push({
+        provider: ollama,
+        model: localModel,
+        label: `ollama/${localModel}`,
+        providerKind: "ollama",
+      });
+    }
+    if (cloudOk && config.mode !== "local-only") {
+      candidates.push({
+        provider: openrouter!,
+        model: cloudModel,
+        label: `openrouter/${cloudModel}`,
+        providerKind: "openrouter",
+      });
+    }
+
+    if (candidates.length === 0) {
+      return [
+        this.readOnlyReply(mode, text),
+        "",
+        "_(No reachable model. Start Ollama with `llama3.2` (or set `OLLAMA_MODEL`), or add OpenRouter credits.)_",
+      ].join("\n");
+    }
+
+    const errors: string[] = [];
+    for (const c of candidates) {
+      const t0 = Date.now();
+      try {
+        const res = await c.provider.generate({
+          messages,
+          tools: [],
+          model: c.model,
+          maxTokens: 1024,
+        });
+        const latencyMs = Date.now() - t0;
+        const trace = traces?.recordTrace({
+          sessionId,
+          taskId: null,
+          source: "chat",
+          provider: c.providerKind,
+          model: c.model,
+          promptTokens: res.usage.promptTokens,
+          completionTokens: res.usage.completionTokens,
+          estimatedCostUsd: res.usage.estimatedCostUsd,
+          latencyMs,
+          status: "ok",
+          error: null,
+        });
+        if (trace) {
+          events.publish(
+            "model.usage",
+            {
+              provider: trace.provider,
+              model: trace.model,
+              promptTokens: trace.promptTokens,
+              completionTokens: trace.completionTokens,
+              estimatedCostUsd: trace.estimatedCostUsd,
+              latencyMs: trace.latencyMs,
+              status: "ok",
+            },
+            { sessionId },
+          );
+        }
+        const body = (res.content ?? "").trim() || "(empty model response)";
+        return `**${mode.toUpperCase()} mode** (${c.label}) — no repository mutations.\n\n${body}`;
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        errors.push(`${c.label}: ${detail}`);
+        traces?.recordTrace({
+          sessionId,
+          taskId: null,
+          source: "chat",
+          provider: c.providerKind,
+          model: c.model,
+          promptTokens: null,
+          completionTokens: null,
+          estimatedCostUsd: null,
+          latencyMs: Date.now() - t0,
+          status: "error",
+          error: detail.slice(0, 1000),
+        });
+        traces?.appendLog({
+          level: "error",
+          scope: "gateway:model",
+          message: detail,
+          fields: { provider: c.providerKind, model: c.model, sessionId },
+        });
+        events.publish(
+          "log.error",
+          { message: detail, provider: c.providerKind, model: c.model },
+          { sessionId },
+        );
+      }
+    }
+
+    return [
+      this.readOnlyReply(mode, text),
+      "",
+      `_(All model calls failed.)_`,
+      ...errors.map((e) => `- ${e.slice(0, 240)}`),
+    ].join("\n");
   }
 
   private readOnlyReply(mode: ChatMode, text: string): string {

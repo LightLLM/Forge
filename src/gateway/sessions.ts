@@ -22,6 +22,11 @@ export class InteractionSessionStore {
     this.db = new DatabaseSync(dbPath);
   }
 
+  /** Shared connection for TraceStore and related gateway tables. */
+  get database(): DatabaseSync {
+    return this.db;
+  }
+
   initialize(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS interaction_sessions (

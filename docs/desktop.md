@@ -54,6 +54,14 @@ Invariant: one Core — CLI, Desktop, and Gateway share it. See [ADR](adr/deskto
 | Settings | OS app data (`%APPDATA%/Forge`, macOS Application Support, XDG) |
 | Secrets | Electron `safeStorage` (Credential Manager / Keychain / libsecret) with file fallback |
 | Workspace | User-selected project directory only |
+| Chat sessions / messages | Local SQLite (`config.dbPath` under workspace `.forge`) — restored on relaunch |
+| Model traces & error logs | Same SQLite (`model_traces`, `app_logs`) — **Eval & Traces** panel |
+
+## Operator panels
+
+- **Terminal** — allowlisted workspace commands (same policy as agent `run_command`); not a free shell
+- **Eval & Traces** — token usage, latency, and warn/error log for model calls
+- **Sessions** — reopen prior chats; sidebar keeps recent sessions
 
 ## Packaging notes
 

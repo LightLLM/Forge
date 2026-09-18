@@ -24,30 +24,40 @@ import { createRequire } from "node:module";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
+// Consistent app-data folder: %APPDATA%/Forge (not forge-desktop)
+app.setName("Forge");
+
+/** Tiny 32x32 PNG so Windows Tray is valid (empty icons break tray/dialogs). */
+const TRAY_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAALElEQVRYR+3YIQ4AMAgEwbz/0tWmQYIEzMzW7J4C8P8KioqKioqKioqKioqK+gcPWwABMQz2VwAAAABJRU5ErkJggg==";
+
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
 /** @type {Tray | null} */
 let tray = null;
-/** @type {import('../dist/desktop/index.js').RuntimeSupervisor | null} */
+/** @type {any} */
 let supervisor = null;
-/** @type {import('../dist/desktop/index.js').SecretStore | null} */
+/** @type {any} */
 let secrets = null;
+/** @type {any} */
+let desktopMod = null;
 let shuttingDown = false;
 let allowBackground = false;
 /** @type {string} */
 let appDataDir = "";
-/** @type {import('../dist/desktop/index.js').DesktopSettings | null} */
+/** @type {any} */
 let settings = null;
 /** @type {string | null} */
 let gatewayBaseUrl = null;
 
 function forgeModule() {
-  // Prefer built dist (desktop:dev runs pnpm build first).
   const distIndex = join(resolveForgeRepoRoot(), "dist", "desktop", "index.js");
   if (existsSync(distIndex)) {
     return import(pathToFileURL(distIndex).href);
   }
-  throw new Error("Forge desktop modules missing — run pnpm build");
+  throw new Error(
+    `Forge desktop modules missing at ${distIndex}. Reinstall Forge or run pnpm build.`,
+  );
 }
 
 function resolveForgeRepoRoot() {
@@ -66,6 +76,7 @@ function resolvePackagedDistRoot() {
 
 function logLine(msg) {
   try {
+    if (!appDataDir) appDataDir = app.getPath("userData");
     mkdirSync(appDataDir, { recursive: true });
     appendFileSync(
       join(appDataDir, "desktop.log"),
@@ -79,6 +90,7 @@ function logLine(msg) {
 }
 
 function createMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) return mainWindow;
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
@@ -86,9 +98,9 @@ function createMainWindow() {
     minHeight: 640,
     title: "Forge",
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     webPreferences: {
-      preload: join(__dirname, "preload.mjs"),
+      preload: join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -114,20 +126,40 @@ function createMainWindow() {
 
 function notify(title, body) {
   if (!Notification.isSupported()) return;
-  const n = new Notification({ title, body });
-  n.on("click", () => {
-    mainWindow?.show();
-    mainWindow?.focus();
-  });
-  n.show();
+  try {
+    const n = new Notification({ title, body });
+    n.on("click", () => {
+      mainWindow?.show();
+      mainWindow?.focus();
+    });
+    n.show();
+  } catch {
+    /* ignore */
+  }
 }
 
 function ensureTray() {
   if (tray) return;
-  const icon = nativeImage.createEmpty();
-  tray = new Tray(icon);
-  tray.setToolTip("Forge");
-  const contextMenu = Menu.buildFromTemplate([
+  try {
+    const icon = nativeImage.createFromDataURL(TRAY_PNG);
+    if (icon.isEmpty()) {
+      logLine("tray icon empty — skipping tray");
+      return;
+    }
+    tray = new Tray(icon);
+    tray.setToolTip("Forge");
+    tray.setContextMenu(buildAppMenu(true));
+    tray.on("double-click", () => {
+      mainWindow?.show();
+      mainWindow?.focus();
+    });
+  } catch (err) {
+    logLine(`tray failed: ${err}`);
+  }
+}
+
+function buildAppMenu(forTray = false) {
+  const items = [
     {
       label: "Open Forge",
       click: () => {
@@ -136,10 +168,18 @@ function ensureTray() {
       },
     },
     {
-      label: "Run diagnostics",
+      label: "Open Project…",
       click: () => {
-        mainWindow?.show();
-        mainWindow?.webContents.send("forge:navigate", "diagnostics");
+        void changeProjectFromUi();
+      },
+    },
+    { type: "separator" },
+    {
+      label: "Open logs",
+      click: () => {
+        const log = join(appDataDir || app.getPath("userData"), "desktop.log");
+        if (!existsSync(log)) writeFileSync(log, "", "utf8");
+        shell.showItemInFolder(log);
       },
     },
     { type: "separator" },
@@ -151,19 +191,102 @@ function ensureTray() {
         void shutdown().finally(() => app.quit());
       },
     },
-  ]);
-  tray.setContextMenu(contextMenu);
-  tray.on("double-click", () => mainWindow?.show());
+  ];
+  return forTray
+    ? Menu.buildFromTemplate(items)
+    : Menu.buildFromTemplate([
+        { label: "File", submenu: items },
+        {
+          label: "Edit",
+          submenu: [
+            { role: "copy" },
+            { role: "paste" },
+            { role: "selectAll" },
+          ],
+        },
+      ]);
+}
+
+async function pickProjectDirectory() {
+  const win = BrowserWindow.getFocusedWindow() || mainWindow;
+  if (win && !win.isDestroyed()) {
+    win.show();
+    win.focus();
+  }
+  const opts = {
+    title: "Select a local project folder",
+    buttonLabel: "Open Project",
+    properties: ["openDirectory"],
+  };
+  const res = win
+    ? await dialog.showOpenDialog(win, opts)
+    : await dialog.showOpenDialog(opts);
+  if (res.canceled || !res.filePaths?.[0]) return null;
+  return res.filePaths[0];
+}
+
+function syncProviderEnv(workspacePath) {
+  const key = secrets?.get("openrouter_api_key");
+  if (key) {
+    process.env.OPENROUTER_API_KEY = key;
+  }
+  if (settings?.routingMode) {
+    process.env.FORGE_MODE = settings.routingMode;
+  }
+  if (settings?.localModel) {
+    process.env.OLLAMA_MODEL = settings.localModel;
+    process.env.FORGE_LOCAL_MODEL = settings.localModel;
+  }
+  if (settings?.cloudModel) {
+    process.env.OPENROUTER_MODEL = settings.cloudModel;
+    process.env.FORGE_CLOUD_MODEL = settings.cloudModel;
+  }
+  if (settings?.ollamaBaseUrl) {
+    process.env.OLLAMA_BASE_URL = settings.ollamaBaseUrl;
+  }
+  try {
+    const forgeDir = join(workspacePath, ".forge");
+    mkdirSync(forgeDir, { recursive: true });
+    const lines = [];
+    if (settings?.localModel) {
+      lines.push(`OLLAMA_MODEL=${settings.localModel}`);
+      lines.push(`FORGE_LOCAL_MODEL=${settings.localModel}`);
+    }
+    if (settings?.cloudModel) {
+      lines.push(`OPENROUTER_MODEL=${settings.cloudModel}`);
+      lines.push(`FORGE_CLOUD_MODEL=${settings.cloudModel}`);
+    }
+    if (settings?.routingMode) lines.push(`FORGE_MODE=${settings.routingMode}`);
+    if (settings?.ollamaBaseUrl) lines.push(`OLLAMA_BASE_URL=${settings.ollamaBaseUrl}`);
+    if (key) lines.push(`OPENROUTER_API_KEY=${key}`);
+    writeFileSync(join(forgeDir, "desktop.env"), lines.join("\n") + "\n", "utf8");
+  } catch (err) {
+    logLine(`env sync skipped: ${err}`);
+  }
 }
 
 async function startRuntime(workspacePath) {
-  const mod = await forgeModule();
+  const mod = desktopMod || (await forgeModule());
+  desktopMod = mod;
   const forgeRoot = resolveForgeRepoRoot();
   /** @type {import('node:child_process').ChildProcess | null} */
   let childProc = null;
 
+  if (supervisor) {
+    try {
+      await supervisor.stop();
+    } catch {
+      /* ignore */
+    }
+    supervisor = null;
+  }
+
+  syncProviderEnv(workspacePath);
+
   const start = async () => {
-    if (app.isPackaged || process.env.FORGE_DESKTOP_INPROCESS === "1") {
+    // Prefer child process so agent/model work cannot freeze the Electron UI thread.
+    // Opt into in-process only with FORGE_DESKTOP_INPROCESS=1.
+    if (process.env.FORGE_DESKTOP_INPROCESS === "1") {
       return mod.startInProcessRuntime({ workspacePath, host: "127.0.0.1" });
     }
     const port = await mod.pickLoopbackPort();
@@ -174,6 +297,22 @@ async function startRuntime(workspacePath) {
       port,
       packagedDistRoot: resolvePackagedDistRoot(),
       electronExecPath: app.isPackaged ? process.execPath : undefined,
+      env: {
+        ...(process.env.OPENROUTER_API_KEY
+          ? { OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY }
+          : {}),
+        ...(process.env.OPENROUTER_MODEL
+          ? { OPENROUTER_MODEL: process.env.OPENROUTER_MODEL }
+          : {}),
+        ...(process.env.OLLAMA_MODEL ? { OLLAMA_MODEL: process.env.OLLAMA_MODEL } : {}),
+        ...(process.env.FORGE_MODE ? { FORGE_MODE: process.env.FORGE_MODE } : {}),
+        ...(process.env.FORGE_LOCAL_MODEL
+          ? { FORGE_LOCAL_MODEL: process.env.FORGE_LOCAL_MODEL }
+          : {}),
+        ...(process.env.OLLAMA_BASE_URL
+          ? { OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL }
+          : {}),
+      },
     });
     childProc = child.child;
     await mod.waitForGateway(child.baseUrl, { timeoutMs: 90_000 });
@@ -192,6 +331,7 @@ async function startRuntime(workspacePath) {
   });
   const runtime = await supervisor.start();
   gatewayBaseUrl = runtime.baseUrl;
+  logLine(`runtime ready workspace=${workspacePath} url=${runtime.baseUrl}`);
 
   if (runtime.mode === "child" && childProc) {
     childProc.on("exit", (code, signal) => {
@@ -212,8 +352,33 @@ async function startRuntime(workspacePath) {
   return runtime;
 }
 
+async function changeProjectFromUi() {
+  try {
+    const path = await pickProjectDirectory();
+    if (!path) return;
+    if (!desktopMod || !settings) return;
+    settings = {
+      ...desktopMod.DEFAULT_DESKTOP_SETTINGS,
+      ...settings,
+      onboardingComplete: true,
+      workspacePath: path,
+      version: 1,
+    };
+    desktopMod.saveDesktopSettings(appDataDir, settings);
+    await mainWindow?.loadFile(join(__dirname, "loading.html"));
+    const runtime = await startRuntime(path);
+    await mainWindow?.loadURL(runtime.baseUrl + "/");
+    notify("Forge", `Opened project: ${path}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logLine(`changeProject failed: ${msg}`);
+    dialog.showErrorBox("Forge", `Could not open project:\n${msg}`);
+  }
+}
+
 async function loadAppUi() {
   if (!settings?.onboardingComplete || !settings.workspacePath) {
+    logLine("showing onboarding");
     await mainWindow.loadFile(join(__dirname, "onboarding.html"));
     return;
   }
@@ -230,6 +395,7 @@ async function loadAppUi() {
          <body style="font-family:system-ui;background:#0f1216;color:#e6edf3;padding:2rem">
          <h1>Could not start Forge</h1>
          <pre style="color:#f07178;white-space:pre-wrap">${msg.replace(/[<>&]/g, "")}</pre>
+         <p>Use <strong>File → Open Project…</strong> to choose another folder.</p>
          </body>`,
       )}`,
     );
@@ -237,31 +403,51 @@ async function loadAppUi() {
 }
 
 function registerIpc(mod) {
-  ipcMain.handle("forge:getSettings", () => {
-    const s = settings;
-    return {
-      ...s,
-      hasOpenRouterKey: secrets?.has("openrouter_api_key") ?? false,
-      appDataDir,
-      version: app.getVersion(),
-      gatewayBaseUrl,
-    };
-  });
+  ipcMain.handle("forge:getSettings", () => ({
+    ...settings,
+    hasOpenRouterKey: secrets?.has("openrouter_api_key") ?? false,
+    appDataDir,
+    version: app.getVersion(),
+    gatewayBaseUrl,
+  }));
 
   ipcMain.handle("forge:pickProject", async () => {
-    const res = await dialog.showOpenDialog(mainWindow, {
-      title: "Open Project",
-      properties: ["openDirectory", "createDirectory"],
+    try {
+      return await pickProjectDirectory();
+    } catch (err) {
+      logLine(`pickProject error: ${err}`);
+      throw err;
+    }
+  });
+
+  ipcMain.handle("forge:pickFolder", async () => {
+    const win = BrowserWindow.getFocusedWindow() || mainWindow;
+    const res = await dialog.showOpenDialog(win ?? undefined, {
+      title: "Select folder",
+      properties: ["openDirectory"],
     });
-    if (res.canceled || !res.filePaths[0]) return null;
+    if (res.canceled || !res.filePaths?.[0]) return null;
     return res.filePaths[0];
   });
 
-  ipcMain.handle("forge:detectOllama", async (_e, baseUrl) => {
-    return mod.detectOllama(baseUrl || settings?.ollamaBaseUrl);
+  ipcMain.handle("forge:pickFiles", async () => {
+    const win = BrowserWindow.getFocusedWindow() || mainWindow;
+    const res = await dialog.showOpenDialog(win ?? undefined, {
+      title: "Select files",
+      properties: ["openFile", "multiSelections"],
+    });
+    if (res.canceled || !res.filePaths?.length) return [];
+    return res.filePaths;
   });
 
+  ipcMain.handle("forge:detectOllama", async (_e, baseUrl) =>
+    mod.detectOllama(baseUrl || settings?.ollamaBaseUrl),
+  );
+
   ipcMain.handle("forge:saveOnboarding", async (_e, payload) => {
+    if (!payload?.workspacePath) {
+      throw new Error("No project folder selected");
+    }
     settings = {
       ...mod.DEFAULT_DESKTOP_SETTINGS,
       ...settings,
@@ -269,37 +455,23 @@ function registerIpc(mod) {
       workspacePath: payload.workspacePath,
       routingMode: payload.routingMode || "local-preferred",
       localModel: payload.localModel || null,
+      cloudModel: payload.cloudModel || null,
       ollamaBaseUrl: payload.ollamaBaseUrl || "http://127.0.0.1:11434",
       runInBackground: Boolean(payload.runInBackground),
       version: 1,
     };
     allowBackground = settings.runInBackground;
     mod.saveDesktopSettings(appDataDir, settings);
+    logLine(`onboarding saved workspace=${settings.workspacePath}`);
 
     if (payload.openRouterApiKey) {
       secrets.set("openrouter_api_key", String(payload.openRouterApiKey));
     }
 
-    // Persist non-secret routing hints for the workspace
-    try {
-      const forgeDir = join(settings.workspacePath, ".forge");
-      mkdirSync(forgeDir, { recursive: true });
-      const lines = [];
-      if (settings.localModel) lines.push(`FORGE_LOCAL_MODEL=${settings.localModel}`);
-      lines.push(`FORGE_MODE=${settings.routingMode}`);
-      if (secrets.has("openrouter_api_key")) {
-        const key = secrets.get("openrouter_api_key");
-        if (key) lines.push(`OPENROUTER_API_KEY=${key}`);
-      }
-      writeFileSync(join(forgeDir, "desktop.env"), lines.join("\n") + "\n", "utf8");
-    } catch (err) {
-      logLine(`env write skipped: ${err}`);
-    }
-
     await mainWindow.loadFile(join(__dirname, "loading.html"));
     const runtime = await startRuntime(settings.workspacePath);
     await mainWindow.loadURL(runtime.baseUrl + "/");
-    return { ok: true };
+    return { ok: true, workspacePath: settings.workspacePath };
   });
 
   ipcMain.handle("forge:setBackground", (_e, enabled) => {
@@ -314,7 +486,6 @@ function registerIpc(mod) {
   ipcMain.handle("forge:openPath", async (_e, target) => {
     if (!settings?.workspacePath) return { ok: false };
     const root = settings.workspacePath;
-    // Only allow revealing paths under workspace
     if (typeof target !== "string" || !target.startsWith(root)) {
       return { ok: false, error: "path outside workspace" };
     }
@@ -332,7 +503,9 @@ function registerIpc(mod) {
   ipcMain.handle("forge:doctor", async () => {
     const ollama = await mod.detectOllama(settings?.ollamaBaseUrl);
     return {
-      forgeCore: existsSync(join(resolveForgeRepoRoot(), "dist", "cli", "index.js")) || app.isPackaged,
+      forgeCore:
+        existsSync(join(resolveForgeRepoRoot(), "dist", "cli", "index.js")) ||
+        app.isPackaged,
       database: true,
       git: true,
       ollama: ollama.ok,
@@ -340,29 +513,16 @@ function registerIpc(mod) {
       openRouter: secrets?.has("openrouter_api_key") ?? false,
       gateway: Boolean(gatewayBaseUrl),
       appDataDir,
+      workspacePath: settings?.workspacePath ?? null,
     };
   });
 
-  ipcMain.handle("forge:checkForUpdates", async () => {
-    // DESKTOP-10: architecture hook — electron-updater when publish config exists
-    try {
-      const { autoUpdater } = require("electron-updater");
-      autoUpdater.autoDownload = false;
-      const result = await autoUpdater.checkForUpdates();
-      return {
-        ok: true,
-        updateAvailable: Boolean(result?.updateInfo),
-        version: result?.updateInfo?.version ?? null,
-      };
-    } catch {
-      return {
-        ok: true,
-        updateAvailable: false,
-        version: null,
-        detail: "Updater not configured (unsigned/dev build)",
-      };
-    }
-  });
+  ipcMain.handle("forge:checkForUpdates", async () => ({
+    ok: true,
+    updateAvailable: false,
+    version: null,
+    detail: "Updater checks disabled until a signed GitHub Release exists",
+  }));
 }
 
 async function shutdown() {
@@ -375,11 +535,34 @@ async function shutdown() {
 }
 
 app.whenReady().then(async () => {
-  const mod = await forgeModule();
   appDataDir = app.getPath("userData");
   mkdirSync(appDataDir, { recursive: true });
+  logLine(`app ready packaged=${app.isPackaged} userData=${appDataDir}`);
+
+  try {
+    desktopMod = await forgeModule();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logLine(`forgeModule failed: ${msg}`);
+    createMainWindow();
+    await mainWindow.loadURL(
+      `data:text/html,${encodeURIComponent(
+        `<!doctype html><meta charset=utf-8><title>Forge</title>
+         <body style="font-family:system-ui;background:#0f1216;color:#e6edf3;padding:2rem">
+         <h1>Forge failed to start</h1>
+         <pre style="color:#f07178;white-space:pre-wrap">${msg.replace(/[<>&]/g, "")}</pre>
+         </body>`,
+      )}`,
+    );
+    return;
+  }
+
+  const mod = desktopMod;
   settings = mod.loadDesktopSettings(appDataDir);
   allowBackground = Boolean(settings.runInBackground);
+  logLine(
+    `settings onboarding=${settings.onboardingComplete} workspace=${settings.workspacePath}`,
+  );
 
   if (safeStorage.isEncryptionAvailable()) {
     secrets = mod.createElectronSecretStore(appDataDir, safeStorage);
@@ -389,27 +572,10 @@ app.whenReady().then(async () => {
   }
 
   registerIpc(mod);
+  Menu.setApplicationMenu(buildAppMenu(false));
   ensureTray();
   createMainWindow();
   await loadAppUi();
-
-  // Optional auto-update check (never installs silently)
-  if (app.isPackaged) {
-    setTimeout(() => {
-      void (async () => {
-        try {
-          const { autoUpdater } = require("electron-updater");
-          autoUpdater.autoDownload = false;
-          autoUpdater.on("update-available", (info) => {
-            notify("Forge update available", `Version ${info.version} is ready to download.`);
-          });
-          await autoUpdater.checkForUpdates().catch(() => undefined);
-        } catch {
-          /* no publish config */
-        }
-      })();
-    }, 5_000);
-  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

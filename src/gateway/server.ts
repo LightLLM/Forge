@@ -12,6 +12,7 @@ import type { FakeModelProvider } from "../models/fake.js";
 import { MemoryService } from "../memory/service.js";
 import { SkillLoader, SkillRegistry } from "../skills/index.js";
 import { InteractionSessionStore } from "./sessions.js";
+import { TraceStore } from "./trace-store.js";
 import { GatewayEventBus, filterEventsForChannel } from "./events.js";
 import { GatewayControlPlane } from "./control-plane.js";
 import { ChannelManager } from "./channels/index.js";
@@ -22,6 +23,12 @@ import {
   type ChatMode,
 } from "./types.js";
 import { FORGE_GUI_HTML } from "./ui-html.js";
+import { addLogSink } from "../telemetry/logger.js";
+import {
+  DEFAULT_COMMAND_ALLOWLIST,
+  runAllowedCommand,
+} from "../tools/repository.js";
+import { z } from "zod";
 
 export interface GatewayServerOptions {
   store: PersistenceStore;
@@ -39,6 +46,7 @@ export interface GatewayHandle {
   events: GatewayEventBus;
   channels: ChannelManager;
   controlPlane: GatewayControlPlane;
+  traces: TraceStore;
   close: () => Promise<void>;
 }
 
@@ -54,12 +62,24 @@ export class GatewayServer {
 
     const sessions = new InteractionSessionStore(config.dbPath);
     sessions.initialize();
+    const traces = new TraceStore(sessions.database);
+    traces.initialize();
+    const removeLogSink = addLogSink((entry) => {
+      if (entry.level !== "error" && entry.level !== "warn") return;
+      traces.appendLog({
+        level: entry.level,
+        scope: entry.scope,
+        message: entry.message,
+        fields: entry.fields ?? null,
+      });
+    });
     const events = new GatewayEventBus();
     const controlPlane = new GatewayControlPlane({
       store,
       sessions,
       events,
       config,
+      traces,
       fakeProvider: this.options.fakeProvider,
     });
     const channels = new ChannelManager();
@@ -169,6 +189,7 @@ export class GatewayServer {
         events,
         controlPlane,
         channels,
+        traces,
         publicDir: this.options.publicDir,
       }).catch((err) => {
         sendJson(res, 500, {
@@ -196,8 +217,10 @@ export class GatewayServer {
       events,
       channels,
       controlPlane,
+      traces,
       close: async () => {
         controlPlane.cancelAll();
+        removeLogSink();
         await channels.stopAll();
         sessions.close();
         await new Promise<void>((resolveClose, reject) => {
@@ -218,12 +241,13 @@ async function handleRequest(
     events: GatewayEventBus;
     controlPlane: GatewayControlPlane;
     channels: ChannelManager;
+    traces: TraceStore;
     publicDir?: string;
   },
 ): Promise<void> {
   const url = new URL(req.url ?? "/", "http://localhost");
   const method = req.method ?? "GET";
-  const { store, config, sessions, events, controlPlane, channels } = ctx;
+  const { store, config, sessions, events, controlPlane, channels, traces } = ctx;
 
   if (method === "OPTIONS") {
     res.writeHead(204, corsHeaders());
@@ -347,12 +371,21 @@ async function handleRequest(
         sendJson(res, 413, { error: "message too large" });
         return;
       }
-      const result = await controlPlane.handleUserMessage({
-        session,
-        text: parsed.data.content,
-        mode: parsed.data.mode as ChatMode | undefined,
-      });
-      sendJson(res, 200, result);
+      try {
+        const result = await controlPlane.handleUserMessage({
+          session,
+          text: parsed.data.content,
+          mode: parsed.data.mode as ChatMode | undefined,
+          attachments: parsed.data.attachments,
+        });
+        sendJson(res, 200, result);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const status = /too large|Too many|Invalid workspace/i.test(message)
+          ? 413
+          : 400;
+        sendJson(res, status, { error: message });
+      }
       return;
     }
     if (method === "PATCH" && rest === "") {
@@ -513,6 +546,97 @@ async function handleRequest(
     sendJson(res, 200, {
       events: events.history({ sessionId, limit }),
     });
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/api/traces") {
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+    sendJson(res, 200, {
+      summary: traces.summarizeUsage(),
+      traces: traces.listTraces(limit),
+    });
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/api/logs") {
+    const level = url.searchParams.get("level") as
+      | "debug"
+      | "info"
+      | "warn"
+      | "error"
+      | null;
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+    sendJson(res, 200, {
+      logs: traces.listLogs({
+        level: level ?? undefined,
+        limit,
+      }),
+    });
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/api/terminal/allowlist") {
+    const allowlist = [
+      ...DEFAULT_COMMAND_ALLOWLIST,
+      ...(config.commands.allowlist ?? []),
+    ];
+    sendJson(res, 200, { allowlist: [...new Set(allowlist)] });
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/api/terminal/exec") {
+    const body = await readJson(req);
+    const parsed = z
+      .object({ command: z.string().min(1).max(2000) })
+      .safeParse(body);
+    if (!parsed.success) {
+      sendJson(res, 400, { error: parsed.error.flatten() });
+      return;
+    }
+    const allowlist = [
+      ...DEFAULT_COMMAND_ALLOWLIST,
+      ...(config.commands.allowlist ?? []),
+    ];
+    const started = Date.now();
+    try {
+      const result = await runAllowedCommand(parsed.data.command, {
+        workspace: { root: config.workspacePath },
+        commandAllowlist: allowlist,
+        commandTimeoutMs: config.limits.commandTimeoutMs,
+        maxCommandOutputChars: config.limits.maxCommandOutputChars,
+        sandbox: {
+          mode: config.commands.sandbox === "docker" ? "docker" : "host",
+          image: config.commands.dockerImage,
+          networkDisabled: config.commands.dockerNetworkDisabled,
+        },
+      });
+      events.publish("terminal.output", {
+        command: parsed.data.command,
+        exitCode: result.exitCode,
+        stdout: result.stdout.slice(0, 8000),
+        stderr: result.stderr.slice(0, 4000),
+        timedOut: result.timedOut,
+        latencyMs: Date.now() - started,
+      });
+      sendJson(res, 200, {
+        ...result,
+        latencyMs: Date.now() - started,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      traces.appendLog({
+        level: "error",
+        scope: "gateway:terminal",
+        message,
+        fields: { command: parsed.data.command },
+      });
+      events.publish("terminal.output", {
+        command: parsed.data.command,
+        error: message,
+        latencyMs: Date.now() - started,
+      });
+      sendJson(res, 400, { error: message });
+    }
     return;
   }
 

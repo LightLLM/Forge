@@ -192,6 +192,8 @@ export interface ModelMessage {
   content: string;
   toolCallId?: string;
   name?: string;
+  /** Required on assistant turns that requested tools (OpenAI-compatible APIs). */
+  toolCalls?: ToolCallProposal[];
 }
 
 export interface ModelToolDefinition {

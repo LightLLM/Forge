@@ -273,9 +273,15 @@ export function loadConfig(
     parsed.mode;
 
   const localModel =
-    overrides.localModel ?? readEnv("OLLAMA_MODEL") ?? parsed.local.model;
+    overrides.localModel ??
+    readEnv("OLLAMA_MODEL") ??
+    readEnv("FORGE_LOCAL_MODEL") ??
+    parsed.local.model;
   const cloudModel =
-    overrides.cloudModel ?? readEnv("OPENROUTER_MODEL") ?? parsed.cloud.model;
+    overrides.cloudModel ??
+    readEnv("OPENROUTER_MODEL") ??
+    readEnv("FORGE_CLOUD_MODEL") ??
+    parsed.cloud.model;
 
   const maxTurns =
     overrides.maxTurns ??

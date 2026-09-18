@@ -1,10 +1,11 @@
 /**
- * Preload — narrow typed IPC only (DESKTOP-3 security boundary).
+ * Preload (CommonJS) — required for Electron sandbox in packaged builds.
+ * ESM preload.mjs often fails to load inside asar + sandbox.
  */
-import { contextBridge, ipcRenderer } from "electron";
+const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("forgeDesktop", {
-  version: "1.2.0-rc.1",
+  version: "1.2.0-rc.2",
   shell: "electron",
   getSettings: () => ipcRenderer.invoke("forge:getSettings"),
   pickProject: () => ipcRenderer.invoke("forge:pickProject"),

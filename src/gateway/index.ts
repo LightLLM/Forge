@@ -16,6 +16,8 @@ export {
 } from "./types.js";
 export { GatewayEventBus, filterEventsForChannel } from "./events.js";
 export { InteractionSessionStore } from "./sessions.js";
+export { TraceStore } from "./trace-store.js";
+export type { ModelTraceRecord, AppLogRecord } from "./trace-store.js";
 export { GatewayControlPlane } from "./control-plane.js";
 export {
   ChannelManager,

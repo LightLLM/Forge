@@ -91,6 +91,18 @@ export class OllamaProvider implements ModelProvider {
         role: m.role === "tool" ? "tool" : m.role,
         content: m.content,
         ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
+        ...(m.role === "assistant" && m.toolCalls && m.toolCalls.length > 0
+          ? {
+              tool_calls: m.toolCalls.map((tc) => ({
+                id: tc.id,
+                type: "function",
+                function: {
+                  name: tc.name,
+                  arguments: tc.arguments ?? {},
+                },
+              })),
+            }
+          : {}),
       })),
       ...(tools ? { tools } : {}),
       options: {

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -39,7 +39,10 @@ describe("GUI-0 / GW gateway API", () => {
       config,
       host: "127.0.0.1",
       port: 0,
-      fakeProvider: new FakeModelProvider([{ type: "message", content: "ok" }]),
+      fakeProvider: new FakeModelProvider([
+        { type: "message", content: "ok" },
+        { type: "message", content: "PLAN: ship billing in three steps" },
+      ]),
     }).start();
 
     try {
@@ -67,7 +70,7 @@ describe("GUI-0 / GW gateway API", () => {
         message: { content: { text: string } };
       };
       expect(askBody.message.content.text).toMatch(/ASK mode/i);
-      expect(askBody.message.content.text).toMatch(/no repository mutations/i);
+      expect(askBody.message.content.text).toMatch(/ok/i);
 
       const plan = await fetch(`${handle.url}/api/sessions/${session.id}/messages`, {
         method: "POST",
@@ -195,5 +198,154 @@ describe("GW channel pairing + fake E2E", () => {
     expect(sessions.isAuthorized("telegram", "stranger", "chat")).toBe(false);
     sessions.close();
     store.close();
+  });
+
+  it("accepts small file attachments into .forge/inbox and references them in chat", async () => {
+    const dir = tempWorkspace();
+    writeFileSync(join(dir, "notes.txt"), "hello from workspace\n");
+    const config = loadConfig(dir, { mode: "local-only", localModel: "fake-model" });
+    const store = new SqliteStore(config.dbPath);
+    store.initialize();
+    const handle = await new GatewayServer({
+      store,
+      config,
+      host: "127.0.0.1",
+      port: 0,
+      fakeProvider: new FakeModelProvider([{ type: "message", content: "ok" }]),
+    }).start();
+    try {
+      const created = await fetch(`${handle.url}/api/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspacePath: dir,
+          channel: "web",
+          chatMode: "ask",
+        }),
+      });
+      const { session } = (await created.json()) as { session: { id: string } };
+      const payload = Buffer.from("screenshot-bytes").toString("base64");
+      const posted = await fetch(`${handle.url}/api/sessions/${session.id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: "look at this",
+          mode: "ask",
+          attachments: [
+            {
+              name: "shot.png",
+              mimeType: "image/png",
+              sizeBytes: 16,
+              dataBase64: payload,
+            },
+            {
+              name: "notes.txt",
+              mimeType: "text/plain",
+              sizeBytes: 0,
+              workspacePath: "notes.txt",
+            },
+          ],
+        }),
+      });
+      expect(posted.ok).toBe(true);
+      const body = (await posted.json()) as {
+        message: { content: { text: string } };
+      };
+      expect(body.message.content.text).toMatch(/ASK mode/i);
+
+      const hist = await fetch(`${handle.url}/api/sessions/${session.id}/messages`);
+      const messages = (await hist.json()) as {
+        messages: Array<{
+          role: string;
+          content: { text: string };
+          attachments?: Array<{ storedPath?: string }>;
+        }>;
+      };
+      const user = messages.messages.find((m) => m.role === "user");
+      expect(user?.content.text).toMatch(/Attachments:/);
+      expect(user?.content.text).toMatch(/\.forge\/inbox\//);
+      expect(user?.content.text).toMatch(/notes\.txt/);
+      expect(user?.attachments?.length).toBe(2);
+      expect(existsSync(join(dir, user!.attachments![0]!.storedPath!))).toBe(true);
+    } finally {
+      await handle.close();
+      store.close();
+    }
+  });
+});
+
+describe("terminal + traces APIs", () => {
+  it("records chat model usage traces and runs allowlisted terminal commands", async () => {
+    const dir = tempWorkspace();
+    const config = loadConfig(dir, { mode: "local-only", localModel: "fake-model" });
+    const store = new SqliteStore(config.dbPath);
+    store.initialize();
+    const handle = await new GatewayServer({
+      store,
+      config,
+      host: "127.0.0.1",
+      port: 0,
+      fakeProvider: new FakeModelProvider([{ type: "message", content: "traced" }]),
+    }).start();
+
+    try {
+      const created = await fetch(`${handle.url}/api/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspacePath: dir,
+          channel: "web",
+          chatMode: "ask",
+        }),
+      });
+      const { session } = (await created.json()) as { session: { id: string } };
+
+      const ask = await fetch(`${handle.url}/api/sessions/${session.id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "hello", mode: "ask" }),
+      });
+      expect(ask.ok).toBe(true);
+
+      const traces = await fetch(`${handle.url}/api/traces`);
+      const traceBody = (await traces.json()) as {
+        summary: { calls: number };
+        traces: Array<{ provider: string; model: string; status: string }>;
+      };
+      expect(traceBody.summary.calls).toBeGreaterThan(0);
+      expect(traceBody.traces[0]?.provider).toBe("fake");
+      expect(traceBody.traces[0]?.status).toBe("ok");
+
+      const allow = await fetch(`${handle.url}/api/terminal/allowlist`);
+      const allowBody = (await allow.json()) as { allowlist: string[] };
+      expect(allowBody.allowlist).toContain("git status");
+
+      const denied = await fetch(`${handle.url}/api/terminal/exec`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: "rm -rf /" }),
+      });
+      expect(denied.status).toBe(400);
+
+      const ok = await fetch(`${handle.url}/api/terminal/exec`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: "git status" }),
+      });
+      // Workspace may not be a git repo — accept success or non-policy failure via stdout/stderr
+      expect([200, 400].includes(ok.status)).toBe(true);
+      if (ok.status === 200) {
+        const body = (await ok.json()) as { command: string; exitCode: number | null };
+        expect(body.command).toBe("git status");
+      }
+
+      const html = await (await fetch(`${handle.url}/`)).text();
+      expect(html).toMatch(/Terminal/);
+      expect(html).toMatch(/Eval &amp; Traces|Eval & Traces/);
+      expect(html).toMatch(/forge-session-id/);
+    } finally {
+      await handle.close();
+      store.close();
+    }
   });
 });

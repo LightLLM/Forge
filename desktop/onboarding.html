@@ -55,6 +55,12 @@ button:disabled { opacity: 0.5; }
 </div>
 <script>
 const api = window.forgeDesktop;
+if (!api) {
+  document.body.innerHTML = `<div class="wrap"><div class="card"><h2>Forge UI bridge missing</h2>
+  <p class="err">window.forgeDesktop was not loaded. Close this window and reopen Forge after updating, or run File → Quit and relaunch.</p>
+  <p style="color:var(--muted)">If this persists, reinstall from Forge-1.2.0-rc.3-Windows-x64.exe</p></div></div>`;
+  throw new Error("forgeDesktop preload missing");
+}
 const state = {
   step: 0,
   workspacePath: null,
@@ -62,6 +68,7 @@ const state = {
   localModel: null,
   routingMode: "local-preferred",
   openRouterApiKey: "",
+  cloudModel: null,
   runInBackground: false,
 };
 const STEPS = ["Welcome", "Project", "Local AI", "Cloud", "Routing", "Finish"];
@@ -99,11 +106,18 @@ function project() {
   </div>`);
   document.getElementById("back").onclick = () => { state.step = 0; welcome(); };
   document.getElementById("pick").onclick = async () => {
-    const p = await api.pickProject();
-    if (p) {
-      state.workspacePath = p;
-      document.getElementById("path").textContent = p;
-      document.getElementById("next").disabled = false;
+    try {
+      const p = await api.pickProject();
+      if (p) {
+        state.workspacePath = p;
+        document.getElementById("path").textContent = p;
+        document.getElementById("next").disabled = false;
+      } else {
+        document.getElementById("path").textContent = "No folder selected — try again.";
+      }
+    } catch (e) {
+      document.getElementById("path").textContent = "";
+      alert("Could not open folder picker: " + e);
     }
   };
   document.getElementById("next").onclick = () => { state.step = 2; localAi(); };
@@ -155,6 +169,7 @@ function cloud() {
     <h2>Cloud AI (optional)</h2>
     <p>Connect OpenRouter for cloud escalation. The key is stored with OS secure storage and is never shown again.</p>
     <input id="key" type="password" placeholder="OpenRouter API key" style="width:100%;margin-top:0.75rem"/>
+    <input id="cloudModel" type="text" placeholder="OpenRouter model id (e.g. openai/gpt-4o-mini)" style="width:100%;margin-top:0.75rem"/>
     <div class="row">
       <button class="primary" id="next">Continue</button>
       <button id="skip">Skip</button>
@@ -163,9 +178,10 @@ function cloud() {
   </div>`);
   document.getElementById("next").onclick = () => {
     state.openRouterApiKey = document.getElementById("key").value.trim();
+    state.cloudModel = document.getElementById("cloudModel").value.trim() || null;
     state.step = 4; routing();
   };
-  document.getElementById("skip").onclick = () => { state.openRouterApiKey = ""; state.step = 4; routing(); };
+  document.getElementById("skip").onclick = () => { state.openRouterApiKey = ""; state.cloudModel = null; state.step = 4; routing(); };
   document.getElementById("back").onclick = () => { state.step = 2; localAi(); };
 }
 
@@ -194,7 +210,7 @@ function finish() {
   panel(`<div class="card">
     <h2>Forge is ready</h2>
     <p>Project: <span class="path">${state.workspacePath}</span></p>
-    <p>Routing: ${state.routingMode}${state.localModel ? " · Model: " + state.localModel : ""}</p>
+    <p>Routing: ${state.routingMode}${state.localModel ? " · Local: " + state.localModel : ""}${state.cloudModel ? " · Cloud: " + state.cloudModel : ""}</p>
     <div class="row"><button class="primary" id="go">Open Workspace</button></div>
     <p class="err hide" id="err"></p>
   </div>`);
@@ -207,6 +223,7 @@ function finish() {
         workspacePath: state.workspacePath,
         routingMode: state.routingMode,
         localModel: state.localModel,
+        cloudModel: state.cloudModel,
         openRouterApiKey: state.openRouterApiKey || undefined,
         runInBackground: state.runInBackground,
         ollamaBaseUrl: "http://127.0.0.1:11434",

@@ -55,13 +55,29 @@ export class VerificationEngine {
     const checks: VerificationCheck[] = [];
 
     if (this.options.gitDiffCheck) {
-      checks.push(
-        await this.runCheck("git_diff_check", "git diff --check", workspace, allowlist),
-      );
+      if (!existsSync(join(workspace.root, ".git"))) {
+        checks.push({
+          name: "git_diff_check",
+          status: "skipped",
+          stdout: "not a git repository",
+        });
+      } else {
+        checks.push(
+          await this.runCheck("git_diff_check", "git diff --check", workspace, allowlist),
+        );
+      }
     }
 
     if (this.options.typecheck) {
-      const cmd = pickCommand(scripts, pm, ["typecheck", "type-check"], "tsc --noEmit");
+      const hasTsConfig =
+        existsSync(join(workspace.root, "tsconfig.json")) ||
+        existsSync(join(workspace.root, "jsconfig.json"));
+      const cmd = pickCommand(
+        scripts,
+        pm,
+        ["typecheck", "type-check"],
+        hasTsConfig ? "tsc --noEmit" : null,
+      );
       if (cmd) {
         checks.push(await this.runCheck("typecheck", cmd, workspace, allowlist));
       } else {

@@ -78,7 +78,10 @@ export type ForgeGatewayEventType =
   | "goal.completed"
   | "pairing.requested"
   | "channel.status"
-  | "system.status";
+  | "system.status"
+  | "model.usage"
+  | "log.error"
+  | "terminal.output";
 
 export interface ForgeGatewayEvent {
   id: string;
@@ -158,18 +161,33 @@ export const CreateSessionInputSchema = z.object({
   externalUserId: z.string().optional(),
 });
 
-export const PostMessageInputSchema = z.object({
-  content: z.string().min(1).max(100_000),
-  mode: ChatModeSchema.optional(),
-  attachments: z
-    .array(
-      z.object({
-        name: z.string(),
-        mimeType: z.string(),
-        sizeBytes: z.number().int().nonnegative(),
-        /** Base64 for small attachments only; large uploads rejected. */
-        dataBase64: z.string().optional(),
-      }),
-    )
-    .optional(),
-});
+export const PostMessageInputSchema = z
+  .object({
+    content: z.string().max(100_000).default(""),
+    mode: ChatModeSchema.optional(),
+    attachments: z
+      .array(
+        z.object({
+          name: z.string().min(1).max(260),
+          mimeType: z.string().min(1).max(200),
+          sizeBytes: z.number().int().nonnegative(),
+          /** Base64 for small attachments only; large uploads rejected. */
+          dataBase64: z.string().optional(),
+          /** Workspace-relative path (folder/file already in project). */
+          workspacePath: z.string().optional(),
+        }),
+      )
+      .max(8)
+      .optional(),
+  })
+  .superRefine((val, ctx) => {
+    const hasText = val.content.trim().length > 0;
+    const hasAtt = (val.attachments?.length ?? 0) > 0;
+    if (!hasText && !hasAtt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "content or attachments required",
+        path: ["content"],
+      });
+    }
+  });

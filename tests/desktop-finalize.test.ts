@@ -78,9 +78,52 @@ describe("DESKTOP-2..10 desktop finalize", () => {
       expect(runtime.baseUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
       const res = await fetch(`${runtime.baseUrl}/api/system/status`);
       expect(res.ok).toBe(true);
+
+      const created = await fetch(`${runtime.baseUrl}/api/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspacePath: tmp,
+          channel: "web",
+          chatMode: "ask",
+          title: "e2e",
+        }),
+      });
+      expect(created.status).toBe(201);
+      const { session } = (await created.json()) as { session: { id: string } };
+      expect(session.id).toBeTruthy();
+
+      const posted = await fetch(
+        `${runtime.baseUrl}/api/sessions/${session.id}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: "what are your capabilities",
+            mode: "ask",
+          }),
+        },
+      );
+      expect(posted.ok).toBe(true);
+      const result = (await posted.json()) as {
+        message?: { content?: { text?: string } };
+      };
+      expect(result.message?.content?.text).toMatch(/ASK mode/i);
+
+      const gui = await fetch(`${runtime.baseUrl}/`);
+      expect(gui.ok).toBe(true);
+      const page = await gui.text();
+      expect(page).toContain('data-view="sessions"');
+      expect(page).toContain('id="send"');
+      expect(page).toContain("document.addEventListener");
+
       await runtime.stop();
     } finally {
-      rmSync(tmp, { recursive: true, force: true });
+      try {
+        rmSync(tmp, { recursive: true, force: true });
+      } catch {
+        /* Windows may briefly lock SQLite files */
+      }
     }
   });
 
@@ -102,5 +145,32 @@ describe("DESKTOP-2..10 desktop finalize", () => {
     expect(pkg.dependencies["electron-updater"] || pkg.devDependencies["electron-updater"]).toBeTruthy();
     const desktopDoc = readFileSync("docs/desktop.md", "utf8");
     expect(desktopDoc).toMatch(/DESKTOP-10.*\[✓\]/s);
+  });
+
+  it("GUI wires nav/mode clicks and shows chat before awaiting session", () => {
+    const html = readFileSync("src/gateway/ui-html.ts", "utf8");
+    expect(html).toMatch(/document\.addEventListener\("click"/);
+    expect(html).toMatch(/#nav button\[data-view\]/);
+    expect(html).toMatch(/#modes button\[data-mode\]/);
+    expect(html).toMatch(/addChat\("you"/);
+    expect(html).toMatch(/Request timed out/);
+    expect(html).toMatch(/pointer-events:\s*none/);
+    expect(html).toMatch(/mode:\s*"ask"/);
+    expect(html).toMatch(/data-attach="files"/);
+    expect(html).toMatch(/data-attach="folder"/);
+    expect(html).toMatch(/addFiles/);
+    // Extra `));` after these joins is a SyntaxError that disables Send/nav entirely.
+    expect(html).not.toMatch(/No pending approvals\.<\/p>"\)\);/);
+    expect(html).not.toMatch(/No pending pairings\.<\/p>"\)\);/);
+    expect(html).toMatch(/No pending approvals\.<\/p>"\);/);
+    expect(html).toMatch(/No pending pairings\.<\/p>"\);/);
+  });
+
+  it("desktop main syncs OpenRouter into sidecar env and prefers child runtime", () => {
+    const main = readFileSync("desktop/main.mjs", "utf8");
+    expect(main).toMatch(/syncProviderEnv/);
+    expect(main).toMatch(/OPENROUTER_API_KEY/);
+    expect(main).toMatch(/FORGE_DESKTOP_INPROCESS === "1"/);
+    expect(main).toMatch(/startForgeSidecar/);
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "forge-desktop",
-  "version": "1.2.0-rc.1",
+  "version": "1.2.0-rc.3",
   "private": true,
   "description": "Forge Desktop — installable Electron shell for Forge Core",
   "type": "module",
@@ -38,6 +38,7 @@
     },
     "files": [
       "main.mjs",
+      "preload.cjs",
       "preload.mjs",
       "sidecar.mjs",
       "loading.html",

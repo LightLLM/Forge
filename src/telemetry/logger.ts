@@ -4,7 +4,27 @@ export interface LogFields {
   [key: string]: unknown;
 }
 
+export interface LogEntry {
+  ts: string;
+  level: LogLevel;
+  scope: string;
+  message: string;
+  fields?: LogFields;
+}
+
+export type LogSink = (entry: LogEntry) => void;
+
 const SENSITIVE_KEY = /(api[_-]?key|authorization|password|secret|token)/i;
+const sinks: LogSink[] = [];
+
+/** Register a sink for structured log fan-out (e.g. TraceStore). */
+export function addLogSink(sink: LogSink): () => void {
+  sinks.push(sink);
+  return () => {
+    const i = sinks.indexOf(sink);
+    if (i >= 0) sinks.splice(i, 1);
+  };
+}
 
 function redact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redact);
@@ -47,12 +67,12 @@ export class Logger {
   private write(level: LogLevel, message: string, fields?: LogFields): void {
     const order: LogLevel[] = ["debug", "info", "warn", "error"];
     if (order.indexOf(level) < order.indexOf(this.minLevel)) return;
-    const entry = {
+    const entry: LogEntry = {
       ts: new Date().toISOString(),
       level,
       scope: this.scope,
       message,
-      ...(fields ? { fields: redact(fields) } : {}),
+      ...(fields ? { fields: redact(fields) as LogFields } : {}),
     };
     const line = JSON.stringify(entry);
     if (level === "error") {
@@ -61,6 +81,13 @@ export class Logger {
       console.warn(line);
     } else {
       console.log(line);
+    }
+    for (const sink of sinks) {
+      try {
+        sink(entry);
+      } catch {
+        /* never break logging on sink failure */
+      }
     }
   }
 }

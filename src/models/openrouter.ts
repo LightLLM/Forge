@@ -100,6 +100,20 @@ export class OpenRouterProvider implements ModelProvider {
             content: m.content,
           };
         }
+        if (m.role === "assistant" && m.toolCalls && m.toolCalls.length > 0) {
+          return {
+            role: "assistant",
+            content: m.content || null,
+            tool_calls: m.toolCalls.map((tc) => ({
+              id: tc.id,
+              type: "function",
+              function: {
+                name: tc.name,
+                arguments: JSON.stringify(tc.arguments ?? {}),
+              },
+            })),
+          };
+        }
         return { role: m.role, content: m.content };
       }),
       temperature: request.temperature ?? 0.2,

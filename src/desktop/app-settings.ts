@@ -20,6 +20,8 @@ export interface DesktopSettings {
   workspacePath: string | null;
   routingMode: RoutingMode;
   localModel: string | null;
+  /** OpenRouter model id (e.g. openai/gpt-4o-mini). Never an API key. */
+  cloudModel: string | null;
   runInBackground: boolean;
   ollamaBaseUrl: string;
 }
@@ -30,6 +32,7 @@ export const DEFAULT_DESKTOP_SETTINGS: DesktopSettings = {
   workspacePath: null,
   routingMode: "local-preferred",
   localModel: null,
+  cloudModel: null,
   runInBackground: false,
   ollamaBaseUrl: "http://127.0.0.1:11434",
 };

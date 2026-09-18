@@ -270,6 +270,7 @@ export class AgentLoop {
       messages.push({
         role: "assistant",
         content: response.content ?? "",
+        toolCalls: response.toolCalls,
       });
 
       for (const proposal of response.toolCalls) {
