@@ -1,5 +1,5 @@
 import type { ChannelHealth, ChannelKind, OutboundMessage } from "../types.js";
-import type { ChannelAdapter, InboundHandler } from "./types.js";
+import type { ChannelAdapter, ChannelProbeResult, InboundHandler } from "./types.js";
 
 /**
  * Telegram adapter — polling when TELEGRAM_BOT_TOKEN is set.
@@ -13,6 +13,7 @@ export class TelegramAdapter implements ChannelAdapter {
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastMessageAt: string | null = null;
   private lastError: string | null = null;
+  private lastProbe: ChannelProbeResult | null = null;
 
   constructor(private readonly token: string | null) {}
 
@@ -58,11 +59,81 @@ export class TelegramAdapter implements ChannelAdapter {
   async health(): Promise<ChannelHealth> {
     return {
       name: this.name,
-      status: !this.token ? "disabled" : this.running ? "connected" : "disconnected",
+      status: !this.token
+        ? "disabled"
+        : this.lastProbe && !this.lastProbe.ok
+          ? "error"
+          : this.running
+            ? "connected"
+            : "disconnected",
       lastMessageAt: this.lastMessageAt,
-      lastError: this.lastError,
-      detail: this.token ? "token configured" : "token unset",
+      lastError: this.lastError ?? this.lastProbe?.error ?? null,
+      detail: this.lastProbe?.detail
+        ?? (this.token ? "token configured" : "token unset"),
     };
+  }
+
+  /** Live check via Telegram getMe (does not send messages). */
+  async probe(): Promise<ChannelProbeResult> {
+    if (!this.token) {
+      this.lastProbe = {
+        name: this.name,
+        ok: false,
+        status: "disabled",
+        detail: "TELEGRAM_BOT_TOKEN unset",
+        error: null,
+        identity: null,
+      };
+      return this.lastProbe;
+    }
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${this.token}/getMe`, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        description?: string;
+        result?: { username?: string; id?: number; is_bot?: boolean };
+      };
+      if (!res.ok || !data.ok || !data.result) {
+        const err = data.description ?? `HTTP ${res.status}`;
+        this.lastError = err;
+        this.lastProbe = {
+          name: this.name,
+          ok: false,
+          status: "error",
+          detail: "getMe failed",
+          error: err,
+          identity: null,
+        };
+        return this.lastProbe;
+      }
+      const username = data.result.username
+        ? `@${data.result.username}`
+        : `id:${data.result.id}`;
+      this.lastError = null;
+      this.lastProbe = {
+        name: this.name,
+        ok: true,
+        status: this.running ? "connected" : "disconnected",
+        detail: `getMe ok · ${username}`,
+        error: null,
+        identity: username,
+      };
+      return this.lastProbe;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.lastError = message;
+      this.lastProbe = {
+        name: this.name,
+        ok: false,
+        status: "error",
+        detail: "getMe network error",
+        error: message,
+        identity: null,
+      };
+      return this.lastProbe;
+    }
   }
 
   private async poll(): Promise<void> {

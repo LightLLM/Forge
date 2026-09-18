@@ -38,6 +38,14 @@ Open `http://127.0.0.1:8787/` (loopback by default).
 - **Slack** — webhook `/api/webhooks/slack` when `SLACK_BOT_TOKEN` set
 - **WhatsApp** — stub only (official Cloud API later)
 
+Probe connections (no outbound user messages):
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/gateway/channels/probe
+```
+
+Env: `TELEGRAM_BOT_TOKEN`, `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `WHATSAPP_ACCESS_TOKEN` (WhatsApp still stubbed).
+
 ## Security
 
 - Default bind `127.0.0.1`

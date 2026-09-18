@@ -1072,8 +1072,21 @@ async function loadView(name) {
     });
   } else if (name === "gateway") {
     const data = await api("/api/gateway/channels");
-    el.innerHTML = "<h3>Gateway channels</h3><table><tr><th>Channel</th><th>Status</th><th>Detail</th></tr>" +
-      (data.channels||[]).map(c => '<tr><td>'+c.name+'</td><td>'+c.status+'</td><td>'+escapeHtml(c.detail||c.lastError||"")+'</td></tr>').join("") + "</table>";
+    el.innerHTML = "<h3>Gateway channels</h3><p class='muted'>Telegram / Slack need env tokens. WhatsApp is stubbed until Cloud API. Use Probe to verify credentials without sending chat messages.</p><table><tr><th>Channel</th><th>Status</th><th>Detail</th></tr>" +
+      (data.channels||[]).map(c => '<tr><td>'+c.name+'</td><td>'+c.status+'</td><td>'+escapeHtml(c.detail||c.lastError||"")+'</td></tr>').join("") + "</table>" +
+      "<div class='actions' style='margin-top:0.75rem'><button type='button' class='ok' id='probeChannels'>Probe connections</button></div>" +
+      "<pre id='probeOut' style='margin-top:0.75rem;font-size:0.8rem;white-space:pre-wrap'></pre>";
+    const btn = el.querySelector("#probeChannels");
+    if (btn) btn.onclick = async () => {
+      const out = el.querySelector("#probeOut");
+      if (out) out.textContent = "Probing…";
+      try {
+        const probe = await api("/api/gateway/channels/probe", { method:"POST", body:"{}", timeoutMs: 30_000 });
+        if (out) out.textContent = JSON.stringify(probe.probes||[], null, 2);
+      } catch (err) {
+        if (out) out.textContent = String(err);
+      }
+    };
   } else if (name === "models") {
     const data = await api("/api/models");
     el.innerHTML = "<h3>Models</h3><pre>"+escapeHtml(JSON.stringify(data,null,2))+"</pre>";

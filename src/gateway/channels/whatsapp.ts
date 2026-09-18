@@ -1,5 +1,5 @@
 import type { ChannelHealth, ChannelKind, OutboundMessage } from "../types.js";
-import type { ChannelAdapter } from "./types.js";
+import type { ChannelAdapter, ChannelProbeResult } from "./types.js";
 
 /**
  * WhatsApp stub — same ChannelAdapter surface; production must use official Cloud API.
@@ -33,6 +33,19 @@ export class WhatsAppAdapter implements ChannelAdapter {
       detail: this.accessToken
         ? "token present but adapter stubbed (GW-4)"
         : "token unset; adapter stubbed",
+    };
+  }
+
+  async probe(): Promise<ChannelProbeResult> {
+    return {
+      name: this.name,
+      ok: false,
+      status: "disabled",
+      detail: this.accessToken
+        ? "WHATSAPP_ACCESS_TOKEN set but Cloud API adapter not implemented"
+        : "WhatsApp stub — set Cloud API credentials after GW-4 implementation",
+      error: "whatsapp_stub",
+      identity: null,
     };
   }
 }

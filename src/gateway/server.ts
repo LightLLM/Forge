@@ -485,6 +485,11 @@ async function handleRequest(
     return;
   }
 
+  if (method === "POST" && url.pathname === "/api/gateway/channels/probe") {
+    sendJson(res, 200, { probes: await channels.probeAll() });
+    return;
+  }
+
   if (method === "GET" && url.pathname === "/api/gateway/identities") {
     const channel = url.searchParams.get("channel") as ChannelKind | null;
     sendJson(res, 200, {

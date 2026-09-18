@@ -26,7 +26,7 @@ export {
   SlackAdapter,
   WhatsAppAdapter,
 } from "./channels/index.js";
-export type { ChannelAdapter } from "./channels/index.js";
+export type { ChannelAdapter, ChannelProbeResult } from "./channels/index.js";
 
 // GatewayServer exported from server.ts once implemented
 export { GatewayServer } from "./server.js";

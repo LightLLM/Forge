@@ -1,5 +1,5 @@
 import type { ChannelHealth, ChannelKind, OutboundMessage } from "../types.js";
-import type { ChannelAdapter, InboundHandler } from "./types.js";
+import type { ChannelAdapter, ChannelProbeResult, InboundHandler } from "./types.js";
 import { FakeChannelAdapter } from "./fake.js";
 import { TelegramAdapter } from "./telegram.js";
 import { SlackAdapter } from "./slack.js";
@@ -19,7 +19,9 @@ export class ChannelManager {
     whatsappToken?: string | null;
   } = {}) {
     this.fake = new FakeChannelAdapter();
-    this.telegram = new TelegramAdapter(env.telegramToken ?? process.env.TELEGRAM_BOT_TOKEN ?? null);
+    this.telegram = new TelegramAdapter(
+      env.telegramToken ?? process.env.TELEGRAM_BOT_TOKEN ?? null,
+    );
     this.slack = new SlackAdapter(
       env.slackBotToken ?? process.env.SLACK_BOT_TOKEN ?? null,
       env.slackSigningSecret ?? process.env.SLACK_SIGNING_SECRET ?? null,
@@ -58,12 +60,43 @@ export class ChannelManager {
     return Promise.all(this.adapters.map((a) => a.health()));
   }
 
+  async probeAll(): Promise<ChannelProbeResult[]> {
+    const results: ChannelProbeResult[] = [];
+    for (const a of this.adapters) {
+      if (a.name === "fake") {
+        results.push({
+          name: "fake",
+          ok: true,
+          status: "connected",
+          detail: "CI fake channel (no network)",
+          error: null,
+          identity: "fake",
+        });
+        continue;
+      }
+      if (typeof a.probe === "function") {
+        results.push(await a.probe());
+      } else {
+        const h = await a.health();
+        results.push({
+          name: a.name,
+          ok: h.status === "connected",
+          status: h.status,
+          detail: h.detail ?? h.status,
+          error: h.lastError,
+          identity: null,
+        });
+      }
+    }
+    return results;
+  }
+
   get(name: ChannelKind): ChannelAdapter | undefined {
     return this.adapters.find((a) => a.name === name);
   }
 }
 
-export type { ChannelAdapter, InboundHandler } from "./types.js";
+export type { ChannelAdapter, ChannelProbeResult, InboundHandler } from "./types.js";
 export { FakeChannelAdapter } from "./fake.js";
 export { TelegramAdapter } from "./telegram.js";
 export { SlackAdapter } from "./slack.js";
