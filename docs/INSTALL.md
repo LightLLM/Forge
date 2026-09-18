@@ -1,13 +1,32 @@
 # Install Forge on Windows, macOS, and Linux
 
-Forge is a local-first autonomous coding harness (`forge-harness`).  
+Forge ships as a **desktop application** and as a developer CLI (`forge-harness`).  
 Supported desktops: **Windows 10/11**, **macOS 12+**, and **Linux** (x64/arm64).
 
 Repository: https://github.com/LightLLM/Forge
 
 ---
 
-## 1. Prerequisites (all platforms)
+## Desktop installer (recommended for end users)
+
+1. Download the artifact for your OS from [GitHub Releases](https://github.com/LightLLM/Forge/releases) (or build locally — see below).
+2. Install / open the app (`Forge-*-Windows-x64.exe`, `.dmg`, or `.AppImage`).
+3. Launch **Forge** → complete onboarding → open a project → start building.
+
+No terminal, no `localhost`, no manual daemon.
+
+Local Windows package (unsigned RC):
+
+```bash
+pnpm desktop:build:win
+# → desktop/release/Forge-1.2.0-rc.1-Windows-x64.exe
+```
+
+macOS / Linux packages are built on CI (`macos-latest` / `ubuntu-latest`). Unsigned builds are **not** production-distribution ready until signing secrets are configured.
+
+---
+
+## 1. Prerequisites (CLI / developer installs)
 
 | Tool | Requirement | Why |
 |------|-------------|-----|

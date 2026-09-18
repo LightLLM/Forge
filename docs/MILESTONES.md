@@ -31,6 +31,15 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 | GUI-1–4 / GW-1–4 / UX-1 | Web GUI + Telegram/Slack + WhatsApp stub | [✓] | 2026-09-16 |
 | DESKTOP-0 | Desktop shell ADR (Electron vs Tauri) | [✓] | 2026-09-17 |
 | DESKTOP-1 | Electron shell embeds Forge GUI | [✓] | 2026-09-17 |
+| DESKTOP-2 | Runtime supervisor / crash restart | [✓] | 2026-09-17 |
+| DESKTOP-3 | Project picker + app data + SecretStore | [✓] | 2026-09-17 |
+| DESKTOP-4 | Onboarding + Ollama/OpenRouter | [✓] | 2026-09-17 |
+| DESKTOP-5 | Tray + notifications + background | [✓] | 2026-09-17 |
+| DESKTOP-6 | Windows NSIS packaging | [✓] | 2026-09-17 |
+| DESKTOP-7 | macOS DMG packaging (CI) | [✓] | 2026-09-17 |
+| DESKTOP-8 | Linux AppImage packaging (CI) | [✓] | 2026-09-17 |
+| DESKTOP-9 | CI release matrix + signing hooks | [✓] | 2026-09-17 |
+| DESKTOP-10 | electron-updater architecture | [✓] | 2026-09-17 |
 
 ---
 
@@ -238,11 +247,20 @@ Legend: `[✓]` complete · `[~]` partial · `[ ]` not started · `[!]` blocked
 - **Scope:** `desktop/` Electron app; loading splash; spawn Gateway sidecar on `127.0.0.1` ephemeral port; load existing vanilla GUI in `BrowserWindow`; narrow preload; quit kills sidecar. Scripts: `pnpm desktop:dev|test|build`.
 - **Tests:** existing suite + `tests/desktop-1-shell.test.ts`
 - **E2E evidence:** sidecar helpers pick loopback port / wait for `/api/system/status`; package declares Electron main; GUI never requires an external browser for primary UI
-- **Limitations:** No installer yet; crash auto-restart / tray / SecretStore / native project picker are DESKTOP-2+; `desktop:build` does not produce setup.exe yet (DESKTOP-6)
+- **Limitations:** Superseded by DESKTOP-2…10 finalize
+- **Completion date:** 2026-09-17
+
+## DESKTOP-2 … DESKTOP-10 — Desktop finalize
+
+- **Status:** complete
+- **Scope:** Runtime supervisor + in-process host; app-data settings; SecretStore (safeStorage); native project picker; onboarding wizard; Ollama detect; OpenRouter key storage; tray + notifications + background mode; electron-builder Win/macOS/Linux; GitHub Actions release matrix; electron-updater hooks. Version `1.2.0-rc.1`.
+- **Tests:** `tests/desktop-finalize.test.ts` + prior desktop gates
+- **E2E evidence:** in-process gateway status OK; secrets round-trip; supervisor restart bounds; packaging config + CI workflow present
+- **Limitations:** macOS/Linux installers produced on CI runners; code signing/notarization require secrets (unsigned = not production-distribution ready); full GUI E2E with FakeModel is follow-on soak
 - **Completion date:** 2026-09-17
 
 ## Next incomplete
 
-**DESKTOP-2** — Harden Core sidecar lifecycle (monitor, safe restart, durable crash handling). See [docs/desktop.md](desktop.md).
+Desktop product RC is feature-complete for local install → launch → onboard → build. Follow-ons: signed release credentials, deeper GUI E2E, optional always-on OS service mode (explicitly deferred).
 
-Super Build Prompt milestones M0–M20 and GUI/Gateway v1.1 are complete. Hosted control plane remains an explicit non-goal until the local desktop loop is excellent.
+Super Build Prompt milestones M0–M20 and GUI/Gateway v1.1 are complete. Hosted control plane remains an explicit non-goal.

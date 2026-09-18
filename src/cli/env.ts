@@ -7,7 +7,11 @@ import { join } from "node:path";
  * Never logs values.
  */
 export function loadDotEnv(workspacePath: string): void {
-  const path = join(workspacePath, ".env");
+  loadEnvFile(join(workspacePath, ".env"));
+  loadEnvFile(join(workspacePath, ".forge", "desktop.env"));
+}
+
+function loadEnvFile(path: string): void {
   if (!existsSync(path)) return;
   const text = readFileSync(path, "utf8");
   for (const line of text.split(/\r?\n/)) {

@@ -56,9 +56,7 @@ USER → CLI → TaskOrchestrator → ContextCompiler → ModelRouter
 
 Forge is intended to ship as a **cross-platform desktop application** (Windows / macOS / Linux). The Interaction Gateway web GUI is the presentation layer; it will be embedded in a native shell so users never open a browser or manage `localhost`.
 
-**DESKTOP-0 decision:** use **Electron** as the shell (not Tauri 2), because Forge Core is Node-heavy (`node:sqlite`, child processes, optional Playwright, gateway sidecar). See [adr/desktop-runtime.md](adr/desktop-runtime.md) and [desktop.md](desktop.md).
-
-**DESKTOP-1:** `desktop/` hosts Electron main/preload; Forge Gateway runs as a loopback sidecar and the existing `ui-html` GUI loads inside the native window (`pnpm desktop:dev`).
+**DESKTOP-0…10:** Electron shell with onboarding, SecretStore, tray, Win/macOS/Linux packaging, CI release matrix, and electron-updater. See [desktop.md](desktop.md).
 
 Invariant: one Forge Core; CLI, Desktop, and Gateway are interfaces — do not duplicate runtime logic in the shell.
 

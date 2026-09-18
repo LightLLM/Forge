@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Welcome to Forge</title>
+<style>
+:root {
+  --bg:#0f1216; --panel:#161b22; --line:#2a3340; --text:#e6edf3; --muted:#8b9bb0;
+  --accent:#3d9cf0; --ok:#3dd68c; --bad:#f07178;
+  --font: "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; font-family: var(--font);
+  background: radial-gradient(1200px 600px at 10% -10%, #1a2330, var(--bg));
+  color: var(--text);
+}
+.wrap { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+.brand { font-size: 1.75rem; font-weight: 650; letter-spacing: -0.03em; }
+.tag { color: var(--muted); margin-top: 0.35rem; }
+.steps { display: flex; gap: 0.5rem; margin: 1.75rem 0 1.25rem; flex-wrap: wrap; }
+.steps span {
+  font-size: 0.75rem; padding: 0.25rem 0.55rem; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted);
+}
+.steps span.on { color: var(--accent); border-color: var(--accent); }
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 1.25rem 1.35rem; margin-top: 0.75rem;
+}
+h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+p { color: var(--muted); line-height: 1.45; }
+.row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+button, select, input {
+  font: inherit; color: inherit; background: #1e2630; border: 1px solid var(--line);
+  border-radius: 8px; padding: 0.55rem 0.85rem;
+}
+button.primary { background: var(--accent); border-color: transparent; color: #061018; font-weight: 600; }
+button:disabled { opacity: 0.5; }
+.path { font-family: ui-monospace, monospace; font-size: 0.85rem; color: var(--ok); }
+.models { max-height: 160px; overflow: auto; margin-top: 0.75rem; }
+.models label { display: block; padding: 0.35rem 0; color: var(--text); }
+.err { color: var(--bad); margin-top: 0.75rem; }
+.ok { color: var(--ok); }
+.hide { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">Forge</div>
+  <div class="tag">Your autonomous engineering workspace.</div>
+  <div class="steps" id="steps"></div>
+  <div id="panel"></div>
+</div>
+<script>
+const api = window.forgeDesktop;
+const state = {
+  step: 0,
+  workspacePath: null,
+  ollama: null,
+  localModel: null,
+  routingMode: "local-preferred",
+  openRouterApiKey: "",
+  runInBackground: false,
+};
+const STEPS = ["Welcome", "Project", "Local AI", "Cloud", "Routing", "Finish"];
+
+function renderSteps() {
+  document.getElementById("steps").innerHTML = STEPS.map((s, i) =>
+    `<span class="${i === state.step ? "on" : ""}">${s}</span>`
+  ).join("");
+}
+
+function panel(html) {
+  document.getElementById("panel").innerHTML = html;
+  renderSteps();
+}
+
+function welcome() {
+  panel(`<div class="card">
+    <h2>Welcome to Forge</h2>
+    <p>Open a project, connect local or cloud AI, and start building — no terminal required.</p>
+    <div class="row"><button class="primary" id="next">Continue</button></div>
+  </div>`);
+  document.getElementById("next").onclick = () => { state.step = 1; project(); };
+}
+
+function project() {
+  panel(`<div class="card">
+    <h2>Repository</h2>
+    <p>Select an existing project folder. Forge will keep all agent work inside this workspace.</p>
+    <div class="row">
+      <button class="primary" id="pick">Open Existing Project</button>
+      <button id="back">Back</button>
+    </div>
+    <p class="path" id="path">${state.workspacePath || ""}</p>
+    <div class="row"><button class="primary" id="next" ${state.workspacePath ? "" : "disabled"}>Continue</button></div>
+  </div>`);
+  document.getElementById("back").onclick = () => { state.step = 0; welcome(); };
+  document.getElementById("pick").onclick = async () => {
+    const p = await api.pickProject();
+    if (p) {
+      state.workspacePath = p;
+      document.getElementById("path").textContent = p;
+      document.getElementById("next").disabled = false;
+    }
+  };
+  document.getElementById("next").onclick = () => { state.step = 2; localAi(); };
+}
+
+async function localAi() {
+  panel(`<div class="card"><h2>Local AI</h2><p>Detecting Ollama…</p></div>`);
+  const ollama = await api.detectOllama();
+  state.ollama = ollama;
+  if (!ollama.ok) {
+    panel(`<div class="card">
+      <h2>Local AI</h2>
+      <p class="err">Local AI not detected (${ollama.detail}).</p>
+      <p>Install Ollama from https://ollama.com and pull a model, then refresh. You can continue and configure cloud AI instead.</p>
+      <div class="row">
+        <button id="refresh">Refresh</button>
+        <button class="primary" id="next">Continue</button>
+        <button id="back">Back</button>
+      </div>
+    </div>`);
+    document.getElementById("refresh").onclick = () => localAi();
+    document.getElementById("next").onclick = () => { state.step = 3; cloud(); };
+    document.getElementById("back").onclick = () => { state.step = 1; project(); };
+    return;
+  }
+  const models = ollama.models || [];
+  state.localModel = models[0] || null;
+  panel(`<div class="card">
+    <h2>Local AI</h2>
+    <p class="ok">Ollama detected — ${ollama.detail}</p>
+    <div class="models">${models.length ? models.map((m,i) =>
+      `<label><input type="radio" name="model" value="${m}" ${i===0?"checked":""}/> ${m}</label>`
+    ).join("") : "<p>No models pulled yet. Run <code>ollama pull llama3.2</code> outside Forge if you want local inference.</p>"}</div>
+    <div class="row">
+      <button class="primary" id="next">Continue</button>
+      <button id="back">Back</button>
+    </div>
+  </div>`);
+  document.getElementById("next").onclick = () => {
+    const sel = document.querySelector('input[name="model"]:checked');
+    state.localModel = sel ? sel.value : state.localModel;
+    state.step = 3; cloud();
+  };
+  document.getElementById("back").onclick = () => { state.step = 1; project(); };
+}
+
+function cloud() {
+  panel(`<div class="card">
+    <h2>Cloud AI (optional)</h2>
+    <p>Connect OpenRouter for cloud escalation. The key is stored with OS secure storage and is never shown again.</p>
+    <input id="key" type="password" placeholder="OpenRouter API key" style="width:100%;margin-top:0.75rem"/>
+    <div class="row">
+      <button class="primary" id="next">Continue</button>
+      <button id="skip">Skip</button>
+      <button id="back">Back</button>
+    </div>
+  </div>`);
+  document.getElementById("next").onclick = () => {
+    state.openRouterApiKey = document.getElementById("key").value.trim();
+    state.step = 4; routing();
+  };
+  document.getElementById("skip").onclick = () => { state.openRouterApiKey = ""; state.step = 4; routing(); };
+  document.getElementById("back").onclick = () => { state.step = 2; localAi(); };
+}
+
+function routing() {
+  panel(`<div class="card">
+    <h2>Routing</h2>
+    <p>Choose how Forge selects models.</p>
+    <label><input type="radio" name="mode" value="local-only"/> Local Only</label><br/>
+    <label><input type="radio" name="mode" value="local-preferred" checked/> Local Preferred</label><br/>
+    <label><input type="radio" name="mode" value="cloud-allowed"/> Cloud Allowed</label>
+    <label style="display:block;margin-top:1rem"><input type="checkbox" id="bg"/> Continue running in background when the window closes</label>
+    <div class="row">
+      <button class="primary" id="next">Continue</button>
+      <button id="back">Back</button>
+    </div>
+  </div>`);
+  document.getElementById("next").onclick = () => {
+    state.routingMode = document.querySelector('input[name="mode"]:checked').value;
+    state.runInBackground = document.getElementById("bg").checked;
+    state.step = 5; finish();
+  };
+  document.getElementById("back").onclick = () => { state.step = 3; cloud(); };
+}
+
+function finish() {
+  panel(`<div class="card">
+    <h2>Forge is ready</h2>
+    <p>Project: <span class="path">${state.workspacePath}</span></p>
+    <p>Routing: ${state.routingMode}${state.localModel ? " · Model: " + state.localModel : ""}</p>
+    <div class="row"><button class="primary" id="go">Open Workspace</button></div>
+    <p class="err hide" id="err"></p>
+  </div>`);
+  document.getElementById("go").onclick = async () => {
+    const btn = document.getElementById("go");
+    btn.disabled = true;
+    btn.textContent = "Starting…";
+    try {
+      await api.saveOnboarding({
+        workspacePath: state.workspacePath,
+        routingMode: state.routingMode,
+        localModel: state.localModel,
+        openRouterApiKey: state.openRouterApiKey || undefined,
+        runInBackground: state.runInBackground,
+        ollamaBaseUrl: "http://127.0.0.1:11434",
+      });
+    } catch (e) {
+      document.getElementById("err").classList.remove("hide");
+      document.getElementById("err").textContent = String(e);
+      btn.disabled = false;
+      btn.textContent = "Open Workspace";
+    }
+  };
+}
+
+welcome();
+</script>
+</body>
+</html>

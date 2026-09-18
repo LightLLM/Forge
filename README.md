@@ -1,8 +1,8 @@
 # Forge — Local-First Hybrid Autonomous Coding Harness
 
-**Version:** `1.1.0-rc.1` · **Repo:** [LightLLM/Forge](https://github.com/LightLLM/Forge)
+**Version:** `1.2.0-rc.1` · **Repo:** [LightLLM/Forge](https://github.com/LightLLM/Forge)
 
-Forge is a **local-first, cloud-escalating autonomous software-engineering runtime** with a **Web GUI**, **CLI**, and **messaging channels** (Telegram / Slack) that all share one control plane.
+Forge is a **local-first, cloud-escalating autonomous software-engineering runtime** that ships as a **desktop app** (Electron), plus **CLI** and **messaging channels** (Telegram / Slack) on one control plane.
 
 You describe an objective. Forge understands the repository, builds context, routes to a model (preferring local Ollama), lets the model propose tool calls, authorizes and executes them under policy, verifies independently, repairs on failure, and optionally escalates to OpenRouter.
 
@@ -12,32 +12,24 @@ MODEL PROPOSES → FORGE AUTHORIZES → TOOL EXECUTES → TESTS VERIFY → FORGE
 
 Forge—not the model—owns state, permissions, budgets, routing, verification, audit history, escalation, and termination.
 
-## Interfaces (v1.1)
+## Interfaces
 
 ```text
- WEB GUI  ·  CLI  ·  Telegram  ·  Slack  ·  API
+ DESKTOP APP  ·  WEB GUI  ·  CLI  ·  Telegram  ·  Slack  ·  API
                     │
             INTERACTION GATEWAY  (127.0.0.1)
                     │
               Forge runtime
-         (tasks · memory · policy · verify)
-                    │
-              Ollama / OpenRouter
 ```
 
 | Surface | How to start |
 |---------|----------------|
-| **Web GUI** | `forge-harness start` → open http://127.0.0.1:8787/ |
+| **Desktop** | `pnpm desktop:dev` (dev) or install the Windows/macOS/Linux package |
+| **Web GUI** | `forge-harness start` → embedded by Desktop; optional browser for debugging |
 | **CLI** | `forge-harness run "…"` |
-| **Telegram / Slack** | Set bot tokens, then `forge-harness gateway start` (pairing required) |
+| **Telegram / Slack** | Configure in Desktop Settings / env, then gateway start |
 
-**Desktop (DESKTOP-1):** Electron shell embeds the Forge GUI — no external browser.
-
-```bash
-pnpm desktop:dev
-```
-
-Shell choice and roadmap: [docs/desktop.md](docs/desktop.md) · [ADR](docs/adr/desktop-runtime.md). Installers arrive in DESKTOP-6+.
+Desktop roadmap & packaging: [docs/desktop.md](docs/desktop.md)
 
 Docs: [docs/gui-gateway.md](docs/gui-gateway.md) · [docs/INSTALL.md](docs/INSTALL.md) · [docs/desktop.md](docs/desktop.md)
 

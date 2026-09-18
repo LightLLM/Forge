@@ -122,6 +122,11 @@ export class GatewayControlPlane {
     try {
       const ollama = new OllamaProvider({
         baseUrl: runConfig.ollamaBaseUrl,
+        // Local CPU models often exceed the default 120s per request.
+        timeoutMs: Math.max(
+          600_000,
+          (runConfig.limits.timeoutMinutes || 45) * 60_000,
+        ),
       });
       const openrouter = runConfig.openRouterApiKey
         ? new OpenRouterProvider({

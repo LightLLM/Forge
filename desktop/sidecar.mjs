@@ -1,12 +1,4 @@
 /**
- * Re-export Core desktop sidecar helpers for Electron main.
- * Requires `pnpm build` so ../dist/desktop/sidecar.js exists.
+ * Re-export Core desktop helpers for Electron main (requires pnpm build).
  */
-export {
-  buildStartArgs,
-  pickLoopbackPort,
-  resolveForgeRoot,
-  resolveForgeStartCommand,
-  startForgeSidecar,
-  waitForGateway,
-} from "../dist/desktop/sidecar.js";
+export * from "../dist/desktop/index.js";

@@ -1,79 +1,69 @@
 # Forge Desktop
 
-Forge is a **desktop product**. The Web GUI and CLI remain interfaces onto one **Forge Core**; end users should eventually install Forge like any other app (Windows / macOS / Linux) without opening a terminal or a browser to `localhost`.
+Forge is an **installable cross-platform desktop application**. The Web GUI and CLI remain interfaces onto one **Forge Core**; end users install Forge like any other app and never open a terminal or browser to `localhost`.
 
-## Current reality
-
-| Piece | Status |
-|-------|--------|
-| Forge Core | Node/TypeScript under `src/` |
-| Interaction Gateway | HTTP + SSE on `127.0.0.1` |
-| GUI | Vanilla SPA in `src/gateway/ui-html.ts` (embedded in Electron) |
-| Desktop shell | **Electron** under `desktop/` (DESKTOP-1) |
-| Daemon | `src/daemon` + `forge daemon` |
-| SQLite | `node:sqlite` — no native addon |
-| Packaging | Installers = DESKTOP-6+ (not yet) |
-
-## Shell decision
-
-**Electron** — see [ADR desktop-runtime](adr/desktop-runtime.md).
-
-Invariant:
-
-```text
-             FORGE CORE
-       ┌─────────┼──────────┐
-       ▼         ▼          ▼
-      CLI     Desktop    Gateway
-```
-
-## DESKTOP-1 behavior
-
-```text
-pnpm desktop:dev
-      ↓
-Electron window (loading splash)
-      ↓
-spawn Forge Gateway sidecar on 127.0.0.1:<ephemeral>
-      ↓
-load Gateway GUI inside the window
-      ↓
-on quit → SIGTERM sidecar (no orphans)
-```
-
-- No external Chrome/Edge/Safari/Firefox for the primary UI
-- Port is chosen automatically; users never type `localhost`
-- Workspace defaults to the Forge repo root; override with `FORGE_WORKSPACE`
-- Preload exposes only `window.forgeDesktop` metadata (no shell/FS)
-
-## Developer commands
+## Quick start (developers)
 
 ```bash
-pnpm desktop:dev     # build Core + launch Electron
-pnpm desktop:test    # DESKTOP-0/1 gate tests
-pnpm desktop:build   # Core build; packaging arrives in DESKTOP-6+
+pnpm desktop:dev
 ```
 
-Production users will use an installer (DESKTOP-6+) — never these commands.
+On first launch, complete onboarding (project picker → Ollama → OpenRouter → routing), then the existing Forge GUI loads inside the Electron window.
 
-## Milestone plan
+```bash
+pnpm desktop:test
+pnpm desktop:build:win    # Windows NSIS installer (local)
+pnpm desktop:build:mac    # macOS DMG (macOS host/CI)
+pnpm desktop:build:linux  # AppImage (Linux host/CI)
+```
+
+## Architecture
+
+```text
+Electron shell (desktop/)
+      │
+      ├── Onboarding / tray / notifications / SecretStore IPC
+      │
+      └── Forge Core (Gateway + orchestrator)
+                 │
+                 └── 127.0.0.1 only (invisible to users)
+```
+
+Invariant: one Core — CLI, Desktop, and Gateway share it. See [ADR](adr/desktop-runtime.md).
+
+## Milestone status
 
 | ID | Scope | Status |
 |----|--------|--------|
-| DESKTOP-0 | Architecture + Electron ADR | [✓] |
-| DESKTOP-1 | Electron shell; embed existing GUI | [✓] |
-| DESKTOP-2 | Hardened sidecar lifecycle / crash restart | [ ] |
-| DESKTOP-3 | Native project picker, app data, SecretStore | [ ] |
-| DESKTOP-4 | Onboarding + Ollama/OpenRouter UI | [ ] |
-| DESKTOP-5 | Tray + notifications + background | [ ] |
-| DESKTOP-6 | Windows installer | [ ] |
-| DESKTOP-7 | macOS package | [ ] |
-| DESKTOP-8 | Linux package | [ ] |
-| DESKTOP-9 | CI matrix + signing architecture | [ ] |
-| DESKTOP-10 | Auto-update + RC hardening | [ ] |
+| DESKTOP-0 | Electron vs Tauri ADR | [✓] |
+| DESKTOP-1 | Electron shell embeds GUI | [✓] |
+| DESKTOP-2 | Sidecar/runtime supervisor + restart | [✓] |
+| DESKTOP-3 | Project picker, app data, SecretStore | [✓] |
+| DESKTOP-4 | Onboarding + Ollama/OpenRouter | [✓] |
+| DESKTOP-5 | Tray + notifications + background | [✓] |
+| DESKTOP-6 | Windows NSIS packaging | [✓] |
+| DESKTOP-7 | macOS DMG packaging (CI) | [✓] |
+| DESKTOP-8 | Linux AppImage packaging (CI) | [✓] |
+| DESKTOP-9 | CI release matrix + signing hooks | [✓] |
+| DESKTOP-10 | electron-updater architecture | [✓] |
 
-## Target user experience (future)
+## Data & secrets
+
+| Kind | Location |
+|------|----------|
+| Settings | OS app data (`%APPDATA%/Forge`, macOS Application Support, XDG) |
+| Secrets | Electron `safeStorage` (Credential Manager / Keychain / libsecret) with file fallback |
+| Workspace | User-selected project directory only |
+
+## Packaging notes
+
+- Artifacts: `Forge-<version>-Windows-x64.exe`, macOS DMG, Linux AppImage
+- CI: [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml) on `v*` tags
+- **Unsigned** builds are development artifacts unless `CSC_*` / Apple notarization secrets are configured
+- Auto-update uses `electron-updater` against GitHub Releases — never executes arbitrary binaries
+
+## Product UX
 
 ```text
-Download installer → Install → Launch Forge → Select project → Configure AI → Build
+Download → Install → Launch → Open project → Configure AI → Build
 ```

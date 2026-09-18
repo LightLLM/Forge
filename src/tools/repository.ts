@@ -92,7 +92,8 @@ export function createRepositoryTools() {
     risk: "read",
     inputSchema: z.object({
       directory: z.string().default("."),
-      maxEntries: z.number().int().positive().max(2000).default(500),
+      // Local models often pass numbers as strings in tool JSON.
+      maxEntries: z.coerce.number().int().positive().max(2000).default(500),
     }),
     async execute(input, ctx) {
       const files = ctx.workspace.listFiles(input.directory, {
@@ -121,7 +122,7 @@ export function createRepositoryTools() {
     risk: "read",
     inputSchema: z.object({
       query: z.string().min(1),
-      maxResults: z.number().int().positive().max(100).default(30),
+      maxResults: z.coerce.number().int().positive().max(100).default(30),
     }),
     async execute(input, ctx) {
       const files = ctx.workspace.listFiles(".", { maxEntries: 1000 });

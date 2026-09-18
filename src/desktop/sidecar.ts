@@ -49,31 +49,71 @@ export function pickLoopbackPort(): Promise<number> {
   });
 }
 
-export function resolveForgeStartCommand(forgeRoot: string): {
+export function resolveForgeStartCommand(
+  forgeRoot: string,
+  options: { electronExecPath?: string; packagedDistRoot?: string } = {},
+): {
   command: string;
   args: string[];
   cwd: string;
+  env?: NodeJS.ProcessEnv;
 } {
-  const root = resolve(forgeRoot);
-  const distCli = join(root, "dist", "cli", "index.js");
-  if (existsSync(distCli)) {
+  const searchRoots = [
+    options.packagedDistRoot,
+    forgeRoot,
+    join(forgeRoot, "dist"),
+  ].filter((p): p is string => Boolean(p));
+
+  let cli: string | null = null;
+  let cwd = resolve(forgeRoot);
+  for (const root of searchRoots) {
+    const abs = resolve(root);
+    const candidates = [
+      join(abs, "cli", "index.js"),
+      join(abs, "dist", "cli", "index.js"),
+    ];
+    for (const c of candidates) {
+      if (existsSync(c)) {
+        cli = c;
+        // cwd should be package root (parent of dist) when possible
+        cwd = existsSync(join(abs, "package.json"))
+          ? abs
+          : existsSync(join(abs, "..", "package.json"))
+            ? resolve(abs, "..")
+            : abs;
+        break;
+      }
+    }
+    if (cli) break;
+  }
+
+  if (cli && options.electronExecPath) {
     return {
-      command: process.execPath,
-      args: [distCli, "start"],
-      cwd: root,
+      command: options.electronExecPath,
+      args: [cli, "start"],
+      cwd,
+      env: { ELECTRON_RUN_AS_NODE: "1" },
     };
   }
-  const tsxCli = join(root, "node_modules", "tsx", "dist", "cli.mjs");
-  const entry = join(root, "src", "cli", "index.ts");
+  if (cli) {
+    return {
+      command: process.execPath,
+      args: [cli, "start"],
+      cwd,
+    };
+  }
+
+  const tsxCli = join(forgeRoot, "node_modules", "tsx", "dist", "cli.mjs");
+  const entry = join(forgeRoot, "src", "cli", "index.ts");
   if (existsSync(tsxCli) && existsSync(entry)) {
     return {
       command: process.execPath,
       args: [tsxCli, entry, "start"],
-      cwd: root,
+      cwd: resolve(forgeRoot),
     };
   }
   throw new Error(
-    `Forge CLI not found under ${root}. Run pnpm build or ensure tsx is installed.`,
+    `Forge CLI not found under ${forgeRoot}. Run pnpm build or ensure tsx is installed.`,
   );
 }
 
@@ -146,16 +186,19 @@ export function startForgeSidecar(options: {
   host?: string;
   port: number;
   env?: NodeJS.ProcessEnv;
+  electronExecPath?: string;
+  packagedDistRoot?: string;
 }): SidecarHandle {
   const host = options.host ?? "127.0.0.1";
   if (host !== "127.0.0.1" && host !== "localhost") {
     throw new Error("Desktop sidecar must bind to 127.0.0.1 only");
   }
-  const { command, args: baseArgs, cwd } = resolveForgeStartCommand(
-    options.forgeRoot,
-  );
+  const resolved = resolveForgeStartCommand(options.forgeRoot, {
+    electronExecPath: options.electronExecPath,
+    packagedDistRoot: options.packagedDistRoot,
+  });
   const args = [
-    ...baseArgs,
+    ...resolved.args,
     ...buildStartArgs({
       host,
       port: options.port,
@@ -163,12 +206,12 @@ export function startForgeSidecar(options: {
     }),
   ];
   const spawnOpts: SpawnOptions = {
-    cwd,
-    env: { ...process.env, ...options.env },
+    cwd: resolved.cwd,
+    env: { ...process.env, ...resolved.env, ...options.env },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   };
-  const child = spawn(command, args, spawnOpts);
+  const child = spawn(resolved.command, args, spawnOpts);
 
   let stdout = "";
   let stderr = "";
