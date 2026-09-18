@@ -3,6 +3,20 @@ import type { ToolRisk } from "../core/types.js";
 import type { Workspace } from "../workspace/workspace.js";
 import type { Logger } from "../telemetry/logger.js";
 import type { SandboxOptions } from "./sandbox.js";
+import type { PersistenceStore } from "../persistence/store.js";
+import type { MemoryService } from "../memory/service.js";
+import type { SkillRegistry } from "../skills/registry.js";
+import type { TodoBoard } from "./todo-board.js";
+
+export interface ToolServices {
+  store?: PersistenceStore;
+  memory?: MemoryService;
+  projectId?: string;
+  skillRegistry?: SkillRegistry;
+  todos?: TodoBoard;
+  /** When true, network-risk tools may run (still gated by PolicyEngine). */
+  allowNetwork?: boolean;
+}
 
 export interface ToolContext {
   workspace: Workspace;
@@ -14,6 +28,7 @@ export interface ToolContext {
   maxCommandOutputChars: number;
   commandAllowlist: string[];
   sandbox?: SandboxOptions;
+  services?: ToolServices;
 }
 
 export interface ForgeTool<I, O> {

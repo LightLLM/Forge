@@ -540,6 +540,31 @@ async function handleRequest(
     return;
   }
 
+  if (method === "GET" && url.pathname === "/api/tools") {
+    try {
+      const { loadToolPacks } = await import("../tools/packs.js");
+      const tools = await loadToolPacks(
+        config.workspacePath,
+        config.tools.packs,
+      );
+      sendJson(res, 200, {
+        packs: config.tools.packs,
+        allowNetwork: config.tools.allowNetwork === true,
+        tools: tools.map((t) => ({
+          name: t.name,
+          description: t.description,
+          risk: t.risk,
+          networkGated: t.risk === "network",
+        })),
+      });
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
   if (method === "GET" && url.pathname === "/api/events") {
     const sessionId = url.searchParams.get("sessionId") ?? undefined;
     const limit = Number(url.searchParams.get("limit") ?? 100);

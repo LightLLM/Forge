@@ -436,6 +436,7 @@ td, th { text-align: left; padding: 0.5rem 0.35rem; border-bottom: 1px solid var
         <button data-view="pairings">Pairings</button>
         <button data-view="memory">Memory</button>
         <button data-view="skills">Skills</button>
+        <button data-view="tools">Tools</button>
         <button data-view="models">Models</button>
         <button data-view="gateway">Gateway</button>
         <button data-view="settings">Settings</button>
@@ -513,6 +514,7 @@ td, th { text-align: left; padding: 0.5rem 0.35rem; border-bottom: 1px solid var
       <div class="view" id="view-pairings"></div>
       <div class="view" id="view-memory"></div>
       <div class="view" id="view-skills"></div>
+      <div class="view" id="view-tools"></div>
       <div class="view" id="view-models"></div>
       <div class="view" id="view-gateway"></div>
       <div class="view" id="view-settings"><p>Bound to <code>127.0.0.1</code> by default. Secrets never leave the server env. Chats, traces, and logs persist in the local Forge SQLite database.</p></div>
@@ -1078,6 +1080,19 @@ async function loadView(name) {
   } else if (name === "skills") {
     const data = await api("/api/skills");
     el.innerHTML = "<h3>Skills</h3><ul>"+(data.skills||[]).map(s=>'<li><strong>'+escapeHtml(s.id)+'</strong> — '+escapeHtml(s.description)+'</li>').join("")+"</ul>";
+  } else if (name === "tools") {
+    const data = await api("/api/tools");
+    const packs = (data.packs||[]).join(", ");
+    const net = data.allowNetwork ? "enabled" : "disabled (set tools.allowNetwork or FORGE_ALLOW_NETWORK=1)";
+    el.innerHTML =
+      "<h3>Tools</h3>" +
+      "<p class='muted'>Hermes-style agent tools for BUILD runs. Packs: <code>"+escapeHtml(packs)+"</code>. Network: <strong>"+escapeHtml(net)+"</strong>.</p>" +
+      "<table><tr><th>Name</th><th>Risk</th><th>Description</th></tr>" +
+      (data.tools||[]).map(t =>
+        "<tr><td><code>"+escapeHtml(t.name)+"</code></td><td>"+escapeHtml(t.risk)+(t.networkGated?" *":"")+"</td><td>"+escapeHtml(t.description)+"</td></tr>"
+      ).join("") +
+      "</table>" +
+      "<p class='muted' style='margin-top:1rem'>* Network tools stay off until explicitly enabled — Forge stays local-first.</p>";
   } else if (name === "memory") {
     const data = await api("/api/memory");
     el.innerHTML = "<h3>Memory</h3><pre>"+escapeHtml(JSON.stringify(data.memories||[],null,2).slice(0,4000))+"</pre>";
@@ -1166,6 +1181,7 @@ const commands = [
   { label: "New session", run: async () => { state.sessionId = null; localStorage.removeItem("forge-session-id"); chat.innerHTML=""; setEmptyVisible(true); await ensureSession({ forceNew: true }); showView("chat"); } },
   { label: "Open terminal", run: () => showView("terminal") },
   { label: "Open eval & traces", run: () => showView("traces") },
+  { label: "Open tools", run: () => showView("tools") },
   { label: "Open approvals", run: () => showView("approvals") },
   { label: "Open gateway", run: () => showView("gateway") },
   { label: "Open memory", run: () => showView("memory") },

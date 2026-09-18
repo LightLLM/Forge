@@ -28,6 +28,8 @@ export class DefaultPolicyEngine implements PolicyEngine {
     private readonly options: {
       allowWrites: boolean;
       allowExecute: boolean;
+      /** Opt-in; default false (local-first). */
+      allowNetwork?: boolean;
       forbiddenPathPatterns?: RegExp[];
       approvals?: ApprovalsConfig;
     } = { allowWrites: true, allowExecute: true },
@@ -87,7 +89,7 @@ export class DefaultPolicyEngine implements PolicyEngine {
       case "execute":
         return this.options.allowExecute;
       case "network":
-        return false;
+        return this.options.allowNetwork === true;
       default:
         return false;
     }

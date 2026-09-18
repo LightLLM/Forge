@@ -28,7 +28,8 @@ Open `http://127.0.0.1:8787/` (loopback by default).
 - `GET /api/system/status`
 - `POST /api/sessions` · `POST /api/sessions/:id/messages`
 - `GET /api/events/stream` (SSE)
-- `GET /api/approvals` · pairings · channels · models · skills · memory
+- `GET /api/approvals` · pairings · channels · models · skills · memory · tools
+- `GET /api/tools` — loaded tool packs (repository + Hermes-style `agent`) and network gate
 
 ## Channels
 

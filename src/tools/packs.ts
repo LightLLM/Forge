@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 import { resolve, isAbsolute } from "node:path";
 import { existsSync } from "node:fs";
 import { createRepositoryTools } from "./repository.js";
+import { createAgentTools } from "./agent.js";
 import type { RegisteredTool } from "./types.js";
 import { ForgeError } from "../core/types.js";
 
@@ -12,6 +13,9 @@ export interface ToolPackConfig {
 
 const BUILTIN: Record<string, () => RegisteredTool[]> = {
   repository: () => createRepositoryTools(),
+  agent: () => createAgentTools(),
+  /** Hermes-style alias for the agent utility pack. */
+  hermes: () => createAgentTools(),
 };
 
 /**

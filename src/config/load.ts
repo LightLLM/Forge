@@ -175,8 +175,13 @@ export const ForgeConfigSchema = z.object({
     .default({}),
   tools: z
     .object({
-      /** Built-in pack names (e.g. "repository") and/or paths to pack modules. */
-      packs: z.array(z.string()).default(["repository"]),
+      /** Built-in pack names (e.g. "repository", "agent") and/or paths to pack modules. */
+      packs: z.array(z.string()).default(["repository", "agent"]),
+      /**
+       * Opt-in network tools (web_search / web_extract). Default off — local-first.
+       * Override with FORGE_ALLOW_NETWORK=1.
+       */
+      allowNetwork: z.boolean().default(false),
     })
     .default({}),
   skills: z
@@ -324,6 +329,11 @@ export function loadConfig(
 
   const databaseUrl = readEnv("FORGE_DATABASE_URL") ?? parsed.databaseUrl;
 
+  const allowNetwork =
+    readEnv("FORGE_ALLOW_NETWORK") === "1" ||
+    readEnv("FORGE_ALLOW_NETWORK")?.toLowerCase() === "true" ||
+    parsed.tools.allowNetwork === true;
+
   return {
     ...parsed,
     mode,
@@ -335,6 +345,14 @@ export function loadConfig(
       maxRepairs,
       timeoutMinutes,
       maxCloudCostUsd,
+    },
+    tools: {
+      ...parsed.tools,
+      packs:
+        parsed.tools.packs?.length > 0
+          ? parsed.tools.packs
+          : ["repository", "agent"],
+      allowNetwork,
     },
     ollamaBaseUrl,
     openRouterApiKey,
@@ -422,7 +440,8 @@ export function defaultConfigJson(): string {
         risks: ["write", "execute"],
       },
       tools: {
-        packs: ["repository"],
+        packs: ["repository", "agent"],
+        allowNetwork: false,
       },
       skills: {
         enabled: true,

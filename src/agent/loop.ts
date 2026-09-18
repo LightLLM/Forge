@@ -12,7 +12,7 @@ import type { ModelProvider } from "../models/provider.js";
 import type { PersistenceStore } from "../persistence/store.js";
 import { authorizeAndExecute, type PolicyEngine } from "../policy/engine.js";
 import type { ApprovalGate } from "../policy/approvals.js";
-import type { RegisteredTool, ToolContext } from "../tools/types.js";
+import type { RegisteredTool, ToolContext, ToolServices } from "../tools/types.js";
 import type { Logger } from "../telemetry/logger.js";
 import type { Workspace } from "../workspace/workspace.js";
 import {
@@ -50,6 +50,7 @@ export interface AgentLoopOptions {
   sandbox?: SandboxOptions;
   streamProgress?: boolean;
   signal?: AbortSignal;
+  services?: ToolServices;
 }
 
 export interface AgentLoopResult {
@@ -302,6 +303,7 @@ export class AgentLoop {
           maxCommandOutputChars: options.maxCommandOutputChars,
           commandAllowlist: options.commandAllowlist,
           sandbox: options.sandbox,
+          services: options.services,
         };
 
         const result = await authorizeAndExecute(

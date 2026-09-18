@@ -62,6 +62,20 @@ Invariant: one Core — CLI, Desktop, and Gateway share it. See [ADR](adr/deskto
 - **Terminal** — allowlisted workspace commands (same policy as agent `run_command`); not a free shell
 - **Eval & Traces** — token usage, latency, and warn/error log for model calls
 - **Sessions** — reopen prior chats; sidebar keeps recent sessions
+- **Tools** — Hermes-style agent tools (`memory`, `todo`, `skills_*`, `session_search`, `clarify`, optional `web_*`)
+
+### Agent tool packs
+
+Default packs: `repository` + `agent` (alias `hermes`).
+
+| Tool | Risk | Notes |
+|------|------|--------|
+| `memory_search` / `memory` | read / write | Persistent project memory |
+| `todo` | read | Per-task checklist |
+| `skills_list` / `skill_view` | read | Builtin + workspace skills |
+| `session_search` | read | Prior tasks + memories |
+| `clarify` | read | Queues an Approvals item for the user |
+| `web_search` / `web_extract` | network | **Off by default** — set `tools.allowNetwork: true` or `FORGE_ALLOW_NETWORK=1` |
 
 ## Packaging notes
 

@@ -45,10 +45,17 @@ const READ_TOOLS = [
   "search_repository",
   "git_status",
   "git_diff",
+  "memory_search",
+  "todo",
+  "skills_list",
+  "skill_view",
+  "session_search",
+  "clarify",
 ] as const;
 
-const WRITE_TOOLS = ["write_file", "apply_patch"] as const;
+const WRITE_TOOLS = ["write_file", "apply_patch", "memory"] as const;
 const EXEC_TOOLS = ["run_command"] as const;
+const NET_TOOLS = ["web_search", "web_extract"] as const;
 
 export const BUILTIN_ROLES: Record<AgentRoleId, AgentRoleDefinition> = {
   architect: {
@@ -88,7 +95,7 @@ export const BUILTIN_ROLES: Record<AgentRoleId, AgentRoleDefinition> = {
       "Make minimal correct code changes to satisfy the objective.",
       "Stop when done and summarize; Forge runs verification independently.",
     ].join("\n"),
-    allowedTools: [...READ_TOOLS, ...WRITE_TOOLS, ...EXEC_TOOLS],
+    allowedTools: [...READ_TOOLS, ...WRITE_TOOLS, ...EXEC_TOOLS, ...NET_TOOLS],
     permissions: { allowWrites: true, allowExecute: true, maxRisk: "execute" },
     budgets: { maxTurns: 20, maxContextChars: 48_000 },
     modelPolicy: { prefer: "either" },
@@ -102,7 +109,7 @@ export const BUILTIN_ROLES: Record<AgentRoleId, AgentRoleDefinition> = {
       "Focus on verification failures. Form one hypothesis, change minimally, stop.",
       "Prioritize failure-linked files and the current diff.",
     ].join("\n"),
-    allowedTools: [...READ_TOOLS, ...WRITE_TOOLS, ...EXEC_TOOLS],
+    allowedTools: [...READ_TOOLS, ...WRITE_TOOLS, ...EXEC_TOOLS, ...NET_TOOLS],
     permissions: { allowWrites: true, allowExecute: true, maxRisk: "execute" },
     budgets: { maxTurns: 12, maxContextChars: 40_000 },
     modelPolicy: { prefer: "either" },
@@ -116,7 +123,7 @@ export const BUILTIN_ROLES: Record<AgentRoleId, AgentRoleDefinition> = {
       "Strengthen or repair tests. Prefer deterministic assertions.",
       "Do not delete tests to force green status.",
     ].join("\n"),
-    allowedTools: [...READ_TOOLS, "write_file", ...EXEC_TOOLS],
+    allowedTools: [...READ_TOOLS, "write_file", "memory", ...EXEC_TOOLS, ...NET_TOOLS],
     permissions: { allowWrites: true, allowExecute: true, maxRisk: "execute" },
     budgets: { maxTurns: 10, maxContextChars: 36_000 },
     modelPolicy: { prefer: "local" },
@@ -196,6 +203,7 @@ export function getAgentRole(id: string): AgentRoleDefinition | null {
 export function filterToolsForRole<T extends { name: string; risk: ToolRisk }>(
   tools: T[],
   role: AgentRoleDefinition,
+  opts?: { allowNetwork?: boolean },
 ): T[] {
   const allow = new Set(role.allowedTools);
   const rank: Record<ToolRisk, number> = {
@@ -205,7 +213,9 @@ export function filterToolsForRole<T extends { name: string; risk: ToolRisk }>(
     network: 3,
   };
   const max = rank[role.permissions.maxRisk];
-  return tools.filter(
-    (t) => allow.has(t.name) && rank[t.risk] <= max && t.risk !== "network",
-  );
+  return tools.filter((t) => {
+    if (!allow.has(t.name)) return false;
+    if (t.risk === "network") return Boolean(opts?.allowNetwork);
+    return rank[t.risk] <= max;
+  });
 }

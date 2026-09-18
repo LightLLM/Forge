@@ -47,6 +47,7 @@ import {
   filterToolsForRole,
   selectAgentRole,
 } from "../agents/index.js";
+import { TodoBoard } from "../tools/todo-board.js";
 
 export interface OrchestratorDeps {
   store: PersistenceStore;
@@ -78,6 +79,7 @@ export class TaskOrchestrator {
   private readonly contextCompiler = new ContextCompiler();
   private readonly agentLoop = new AgentLoop();
   private tools: RegisteredTool[] = createRepositoryTools();
+  private readonly todoBoard = new TodoBoard();
 
   constructor(private readonly deps: OrchestratorDeps) {
     const providers = {
@@ -219,6 +221,7 @@ export class TaskOrchestrator {
     const policy = new DefaultPolicyEngine({
       allowWrites: true,
       allowExecute: true,
+      allowNetwork: config.tools.allowNetwork === true,
       approvals: {
         mode: config.approvals.mode,
         risks: config.approvals.risks,
@@ -642,12 +645,13 @@ export class TaskOrchestrator {
     }
 
     let relatedSkillsText: string | null = null;
+    let skillRegistry: SkillRegistry | undefined;
     if (config.skills.enabled) {
       const loaded = new SkillLoader().load(args.workspace.root, {
         extraPaths: config.skills.extraPaths,
       });
-      const registry = new SkillRegistry(loaded);
-      const router = new SkillRouter(registry);
+      skillRegistry = new SkillRegistry(loaded);
+      const router = new SkillRouter(skillRegistry);
       const matches = router.route({
         objective: args.task.objective,
         phase: args.phase,
@@ -682,12 +686,18 @@ export class TaskOrchestrator {
         });
 
     const roleTools = config.agents.enabled
-      ? filterToolsForRole(this.tools, role)
-      : this.tools;
+      ? filterToolsForRole(this.tools, role, {
+          allowNetwork: config.tools.allowNetwork === true,
+        })
+      : this.tools.filter(
+          (t) =>
+            t.risk !== "network" || config.tools.allowNetwork === true,
+        );
 
     const rolePolicy = new DefaultPolicyEngine({
       allowWrites: role.permissions.allowWrites,
       allowExecute: role.permissions.allowExecute,
+      allowNetwork: config.tools.allowNetwork === true,
       approvals: {
         mode: config.approvals.mode,
         risks: config.approvals.risks,
@@ -699,7 +709,7 @@ export class TaskOrchestrator {
       `writes=${role.permissions.allowWrites ? "allowed" : "denied"}`,
       `execute=${role.permissions.allowExecute ? "allowed" : "denied"}`,
       `maxRisk=${role.permissions.maxRisk}`,
-      "network=denied",
+      `network=${config.tools.allowNetwork ? "opt-in" : "denied"}`,
       "secrets paths=denied",
     ].join("; ");
 
@@ -747,6 +757,14 @@ export class TaskOrchestrator {
       sandbox,
       streamProgress: config.ui.streamProgress && decision.providerKind === "ollama",
       signal: args.signal,
+      services: {
+        store,
+        memory,
+        projectId: args.task.projectId,
+        skillRegistry,
+        todos: this.todoBoard,
+        allowNetwork: config.tools.allowNetwork === true,
+      },
     });
 
     store.updateTaskFields(args.task.id, {
