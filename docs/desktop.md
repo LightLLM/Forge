@@ -58,9 +58,10 @@ Invariant: one Core — CLI, Desktop, and Gateway share it. See [ADR](adr/deskto
 ## Packaging notes
 
 - Artifacts: `Forge-<version>-Windows-x64.exe`, macOS DMG, Linux AppImage
-- CI: [`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml) on `v*` tags
+- CI workflow template: [docs/desktop-release.workflow.yml](desktop-release.workflow.yml) → copy to `.github/workflows/desktop-release.yml` (requires a GitHub token with `workflow` scope)
 - **Unsigned** builds are development artifacts unless `CSC_*` / Apple notarization secrets are configured
 - Auto-update uses `electron-updater` against GitHub Releases — never executes arbitrary binaries
+- Local Windows installer was verified: `desktop/release/Forge-1.2.0-rc.1-Windows-x64.exe`
 
 ## Product UX
 
